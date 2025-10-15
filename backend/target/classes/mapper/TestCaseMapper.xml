@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.TestCaseMapper">
+
+    <select id="selectAll" resultType="com.example.entity.TestCase">
+        SELECT
+            tc.id,
+            tc.project_id          AS projectId,
+            tc.module_id           AS moduleId,
+            tc.title,
+            tc.status               AS status,
+            tc.priority             AS priority,
+            tc.description,
+            tc.pre_condition       AS preCondition,
+            tc.steps,
+            tc.expected_result     AS expectedResult,
+            tc.created_by          AS createdBy,
+            tc.created_at          AS createdAt,
+            tc.updated_at          AS updatedAt,
+            p.name                 AS projectName,
+            m.name                 AS moduleName,
+            u.username             AS createdByName
+        FROM test_case tc
+                 LEFT JOIN project p ON tc.project_id = p.id
+                 LEFT JOIN module m  ON tc.module_id = m.id
+                 LEFT JOIN `user` u  ON tc.created_by = u.id
+    </select>
+
+    <!-- 按 title 模糊查询 -->
+    <select id="selectByTitle" parameterType="string" resultType="com.example.entity.TestCase">
+        SELECT
+            tc.id,
+            tc.project_id          AS projectId,
+            tc.module_id           AS moduleId,
+            tc.title,
+            tc.status               AS status,
+            tc.priority             AS priority,
+            tc.description,
+            tc.pre_condition       AS preCondition,
+            tc.steps,
+            tc.expected_result     AS expectedResult,
+            tc.created_by          AS createdBy,
+            tc.created_at          AS createdAt,
+            tc.updated_at          AS updatedAt,
+            p.name                 AS projectName,
+            m.name                 AS moduleName,
+            u.username             AS createdByName
+        FROM test_case tc
+                 LEFT JOIN project p ON tc.project_id = p.id
+                 LEFT JOIN module m  ON tc.module_id = m.id
+                 LEFT JOIN `user` u  ON tc.created_by = u.id
+        WHERE tc.title LIKE CONCAT('%', #{title}, '%')
+    </select>
+
+    <!-- 根据 id 查询单条用例 -->
+    <select id="selectById" parameterType="java.lang.Integer" resultType="com.example.entity.TestCase">
+        SELECT
+            tc.id,
+            tc.project_id          AS projectId,
+            tc.module_id           AS moduleId,
+            tc.title,
+            tc.status               AS status,
+            tc.priority             AS priority,
+            tc.description,
+            tc.pre_condition       AS preCondition,
+            tc.steps,
+            tc.expected_result     AS expectedResult,
+            tc.created_by          AS createdBy,
+            tc.created_at          AS createdAt,
+            tc.updated_at          AS updatedAt,
+            p.name                 AS projectName,
+            m.name                 AS moduleName,
+            u.username             AS createdByName
+        FROM test_case tc
+                 LEFT JOIN project p ON tc.project_id = p.id
+                 LEFT JOIN module m  ON tc.module_id = m.id
+                 LEFT JOIN `user` u  ON tc.created_by = u.id
+        WHERE tc.id = #{id}
+    </select>
+
+    <!-- 插入用例（返回自增 id） -->
+    <insert id="insert" parameterType="com.example.entity.TestCase" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO test_case
+        (project_id, module_id, title, description, pre_condition, steps, expected_result, status, priority, created_by, created_at, updated_at)
+        VALUES
+            (#{projectId}, #{moduleId}, #{title}, #{description}, #{preCondition}, #{steps}, #{expectedResult}, #{status}, #{priority}, #{createdBy}, #{createdAt}, #{updatedAt})
+    </insert>
+
+
+    <!-- 更新用例（简单直接更新全部主要字段） -->
+    <update id="update" parameterType="com.example.entity.TestCase">
+        UPDATE test_case
+        SET
+            project_id = #{projectId},
+            module_id = #{moduleId},
+            title = #{title},
+            description = #{description},
+            pre_condition = #{preCondition},
+            steps = #{steps},
+            expected_result = #{expectedResult},
+            status = #{status},
+            priority = #{priority},
+            created_by = #{createdBy},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除用例 -->
+    <delete id="delete" parameterType="java.lang.Integer">
+        DELETE FROM test_case WHERE id = #{id}
+    </delete>
+
+</mapper>

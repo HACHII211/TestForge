@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.DepartmentMapper">
+
+    <!-- 查询所有部门，包含父部门名称 -->
+    <select id="selectAll" resultType="com.example.entity.Department">
+        SELECT d.*,
+               p.name AS parentName
+        FROM `department` d
+                 LEFT JOIN `department` p ON d.parent_id = p.id
+    </select>
+
+    <!-- 按名称模糊查询 -->
+    <select id="selectByName" parameterType="string" resultType="com.example.entity.Department">
+        SELECT d.*,
+               p.name AS parentName
+        FROM `department` d
+                 LEFT JOIN `department` p ON d.parent_id = p.id
+        WHERE d.name LIKE CONCAT('%', #{name}, '%')
+    </select>
+
+    <!-- 根据 id 查询单个部门，包含父部门名称 -->
+    <select id="selectById" parameterType="int" resultType="com.example.entity.Department">
+        SELECT d.*,
+               p.name AS parentName
+        FROM `department` d
+                 LEFT JOIN `department` p ON d.parent_id = p.id
+        WHERE d.id = #{id}
+    </select>
+
+    <!-- 新增部门 -->
+    <insert id="addDepartment" parameterType="com.example.entity.Department" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `department` (name, parent_id, description, created_at, updated_at)
+        VALUES (#{name}, #{parentId}, #{description}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <!-- 更新部门 -->
+    <update id="updateDepartment" parameterType="com.example.entity.Department">
+        UPDATE `department`
+        SET
+            name = #{name},
+            parent_id = #{parentId},
+            description = #{description},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除部门 -->
+    <delete id="deleteDepartment" parameterType="int">
+        DELETE FROM `department` WHERE id = #{id}
+    </delete>
+
+</mapper>
