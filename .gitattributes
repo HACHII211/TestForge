@@ -1,0 +1,2 @@
+# 自动统一换行符为 LF（推荐）
+* text=auto eol=lf
