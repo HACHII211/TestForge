@@ -2,7 +2,9 @@
 package com.example.service;
 
 import com.example.entity.Project;
+import com.example.entity.User;
 import com.example.mapper.ProjectMapper;
+import com.example.mapper.ProjectUserMapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
@@ -16,6 +18,8 @@ public class ProjectService {
     @Resource
     private ProjectMapper projectMapper;
 
+    @Resource
+    private ProjectUserMapper projectUserMapper;
     /**
      * 分页查询所有项目
      */
@@ -32,6 +36,34 @@ public class ProjectService {
         PageHelper.startPage(pageNum, pageSize);
         List<Project> list = projectMapper.selectByName(name);
         return PageInfo.of(list);
+    }
+
+
+    public PageInfo<User> selectProjectUsers(Integer projectId, Integer pageNum, Integer pageSize) {
+        if (projectId == null) return PageInfo.of(List.of());
+        PageHelper.startPage(pageNum == null ? 1 : pageNum, pageSize == null ? 10 : pageSize);
+        List<User> list = projectUserMapper.selectUsersByProjectId(projectId);
+        return PageInfo.of(list);
+    }
+    public void addUserToProject(Integer projectId, Integer userId) {
+        if (projectId == null || userId == null) return;
+        // 先检查是否已存在
+        Integer exists = projectUserMapper.countUserInProject(projectId, userId);
+        if (exists == null || exists == 0) {
+            projectUserMapper.insertProjectUser(projectId, userId);
+        }
+    }
+
+    // 移除成员
+    public void removeUserFromProject(Integer projectId, Integer userId) {
+        if (projectId == null || userId == null) return;
+        projectUserMapper.deleteProjectUser(projectId, userId);
+    }
+
+    // 批量移除成员
+    public void removeUsersFromProjectBatch(Integer projectId, List<Integer> userIds) {
+        if (projectId == null || userIds == null || userIds.isEmpty()) return;
+        projectUserMapper.deleteProjectUserBatch(projectId, userIds);
     }
 
     /**

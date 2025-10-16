@@ -15,13 +15,13 @@ public class OrganizationController {
 
     @GetMapping("/users")
     public Result selectUsers(
-            @RequestParam(required = false) String username,
+            User user,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize) {
 
         PageInfo<User> pageInfo;
-        if (username != null && !username.isEmpty()) {
-            pageInfo = organizationService.selectByName(username, pageNum, pageSize);
+        if (user != null) {
+            pageInfo = organizationService.selectByFilters(user, pageNum, pageSize);
         } else {
             pageInfo = organizationService.selectByPage(pageNum, pageSize);
         }
@@ -30,8 +30,8 @@ public class OrganizationController {
 
 
     @PostMapping("/users")
-    public Result addUser(@RequestBody User user){
-        organizationService.addUser(user);
+    public Result createUserWithRole(@RequestBody User user){
+        organizationService.createUserWithRole(user);
         return Result.success();
     }
 
@@ -42,9 +42,9 @@ public class OrganizationController {
     }
 
     @PutMapping("/users/{id}")
-    public Result updateUser(@RequestBody User user){
+    public Result updateUserWithRole(@RequestBody User user){
         System.out.println(user);
-        organizationService.updateUser(user);
+        organizationService.updateUserWithRole(user);
         return Result.success();
     }
 }

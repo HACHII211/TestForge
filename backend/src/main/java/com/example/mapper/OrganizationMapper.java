@@ -13,5 +13,5 @@ public interface OrganizationMapper {
 
     void updateUser(User user);
 
-    List<User> selectByName(String username);
+    List<User> selectByFilters(User user);
 }

@@ -4,8 +4,6 @@
     <div class="top-links-bar">
       <div class="top-links-inner">
         <a class="top-link active" href="/testforge/testcases">用例库</a>
-        <a class="top-link" href="/testforge/testplans">测试计划</a>
-        <a class="top-link" href="/testforge/reports">报告</a>
       </div>
     </div>
 

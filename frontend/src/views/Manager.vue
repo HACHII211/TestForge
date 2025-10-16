@@ -30,10 +30,10 @@
 <!--            <el-icon><SuitcaseLine /></el-icon>-->
 <!--            管理员信息-->
 <!--          </el-menu-item>-->
-<!--          <el-menu-item index="/testforge/article">-->
-<!--            <el-icon><Reading /></el-icon>-->
-<!--            部门通知-->
-<!--          </el-menu-item>-->
+          <el-menu-item index="/testforge/project">
+            <el-icon><Reading /></el-icon>
+            项目
+          </el-menu-item>
           <el-menu-item index="/testforge/organization" v-if="data.UN.role === 'ADM'">
             <el-icon><Compass /></el-icon>
             组织
@@ -54,12 +54,6 @@
             <el-menu-item index="/testforge/personInfo">用户信息</el-menu-item>
             <el-menu-item index="/testforge/password">修改密码</el-menu-item>
           </el-sub-menu>
-          <el-menu-item index="/testforge/data" v-if="data.UN.role === 'ADM'">
-            <template #title>
-              <span><el-icon><Odometer /></el-icon></span>
-              <span>企业报表</span>
-            </template>
-          </el-menu-item>
           <el-menu-item @click="logOut">
             <el-icon><SwitchButton /></el-icon>
             退出登录

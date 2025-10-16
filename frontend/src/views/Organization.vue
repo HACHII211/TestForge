@@ -20,11 +20,12 @@
             @keydown.enter="onSearch"
         ></el-input>
 
-        <el-select v-model="data.filterDepartmentVal" placeholder="按部门筛选" clearable style="width: 220px; margin-left: 10px">
+        <!-- 添加 @change="onSearch" 让选择时立即筛选 -->
+        <el-select v-model="data.filterDepartmentVal" placeholder="按部门筛选" clearable style="width: 220px; margin-left: 10px" @change="onSearch">
           <el-option v-for="d in data.departments" :key="d._val" :label="d.name" :value="d._val" />
         </el-select>
 
-        <el-select v-model="data.filterRoleVal" placeholder="按角色筛选" clearable style="width: 180px; margin-left: 10px">
+        <el-select v-model="data.filterRoleVal" placeholder="按角色筛选" clearable style="width: 180px; margin-left: 10px" @change="onSearch">
           <el-option v-for="r in data.roles" :key="r._val" :label="r.name" :value="r._val" />
         </el-select>
 
@@ -38,7 +39,7 @@
       </div>
 
       <!-- 表格 -->
-      <el-table :data="data.emp_list" @selection-change="handleSelectionChange" style="margin-top: 12px">
+      <el-table :data="data.user_list" @selection-change="handleSelectionChange" style="margin-top: 12px">
         <el-table-column type="selection" width="55"></el-table-column>
         <el-table-column label="ID" prop="id" width="80"></el-table-column>
 
@@ -74,17 +75,11 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="创建时间" width="180">
+        <el-table-column label="更新时间" width="180">
           <template #default="scope">
-            {{ formatDate(scope.row.created_at || scope.row.createdAt) }}
+            {{ formatDate(scope.row.updated_at || scope.row.updatedAt) }}
           </template>
         </el-table-column>
-
-<!--        <el-table-column label="更新时间" width="180">-->
-<!--          <template #default="scope">-->
-<!--            {{ formatDate(scope.row.updated_at || scope.row.updatedAt) }}-->
-<!--          </template>-->
-<!--        </el-table-column>-->
 
         <el-table-column label="操作" width="160">
           <template #default="scope">
@@ -170,17 +165,17 @@
 import { reactive, ref } from 'vue';
 import request from '@/utils/request.js';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Delete, Edit } from '@element-plus/icons-vue';
 
 const data = reactive({
+  id: null,
   username: null,
   filterDepartmentVal: null,
   filterRoleVal: null,
   pageNum: 1,
   pageSize: 10,
   total: 0,
-  emp_list: [],
-  all_users: [],
+  user_list: [],
+  all_users: [], // 如果将来需要在前端做完整过滤，可以使用
   deleteId: null,
   updateFormVisible: false,
   formVisible3: false,
@@ -236,48 +231,78 @@ const buildDeptAndRoleLists = (list) => {
   data.roles = Array.from(roleMap.values());
 };
 
-const applyFiltersAndPaginate = (list, pageNum, pageSize) => {
-  let filtered = list.slice();
-  if (data.filterDepartmentVal) {
-    filtered = filtered.filter(u => {
-      const id = u.departmentId ?? u.department_id ?? (u.department && u.department.id);
-      const candidate = id != null ? String(id) : `name:${u.departmentName ?? (u.department && (u.department.name || u.department.departmentName)) ?? u.department_name}`;
-      return candidate === data.filterDepartmentVal;
-    });
+/**
+ * 将筛选值解析为后端可识别的参数：
+ * - numeric 值发送 departmentId / roleId
+ * - name:xxx 发送 departmentName / roleName
+ * - null 则不发送
+ */
+const buildFilterParams = () => {
+  const params = {};
+  if (data.filterDepartmentVal != null) {
+    const s = String(data.filterDepartmentVal);
+    if (s.startsWith('name:')) {
+      params.departmentName = s.slice(5);
+    } else {
+      // 尝试转为数字
+      const n = Number(s);
+      if (!Number.isNaN(n)) params.departmentId = n;
+      else params.department = s;
+    }
   }
-  if (data.filterRoleVal) {
-    filtered = filtered.filter(u => {
-      const id = u.roleId ?? u.role_id ?? (u.role && u.role.id);
-      const candidate = id != null ? String(id) : `name:${u.roleName ?? (u.role && u.role.name) ?? u.role_name}`;
-      return candidate === data.filterRoleVal;
-    });
+  if (data.filterRoleVal != null) {
+    const s = String(data.filterRoleVal);
+    if (s.startsWith('name:')) {
+      params.roleName = s.slice(5);
+    } else {
+      const n = Number(s);
+      if (!Number.isNaN(n)) params.roleId = n;
+      else params.role = s;
+    }
   }
-  data.total = filtered.length;
-  const start = (pageNum - 1) * pageSize;
-  return filtered.slice(start, start + pageSize);
+  return params;
 };
 
 const load = async () => {
   try {
-    if (data.filterDepartmentVal || data.filterRoleVal) {
-      const allResp = await request.get('/organization/users', { params: { pageNum: 1, pageSize: 100000 } });
-      const body = allResp.data || {};
-      const list = body.list || (body.data && body.data.list) || [];
-      data.all_users = list;
-      buildDeptAndRoleLists(list);
-      data.emp_list = applyFiltersAndPaginate(list, data.pageNum, data.pageSize);
+    // 构造请求参数（含筛选）
+    const filterParams = buildFilterParams();
+    const params = {
+      username: data.username,
+      pageNum: data.pageNum,
+      pageSize: data.pageSize,
+      ...filterParams,
+    };
+
+    const resp = await request.get('/organization/users', { params });
+    const body = resp.data || {};
+    // 兼容各种返回结构：body.list, body.data.list, body.data
+    const list = body.list || (body.data && body.data.list) || (Array.isArray(body) ? body : (body.data && Array.isArray(body.data) ? body.data : []));
+    // 保留原始数据以便前端进一步处理（若需要）
+    data.all_users = list || [];
+
+    // 如果后端返回 total/useful meta，优先使用，否则使用 list.length
+    const totalFromBody = body.total || (body.data && body.data.total);
+    data.total = typeof totalFromBody === 'number' ? totalFromBody : (list ? list.length : 0);
+
+    // 将当前页面数据赋值到 user_list（如果后端已经做分页，这里就是当前页；如果后端返回完整列表，这里做前端分页）
+    // 判断：如果 body.list（后端分页常用）存在且 body.total 存在，我们认为后端分页已就绪 -> 直接使用 list。
+    if ((body.list || (body.data && body.data.list)) && typeof totalFromBody === 'number') {
+      data.user_list = list;
     } else {
-      const resp = await request.get('/organization/users', { params: { username: data.username, pageNum: data.pageNum, pageSize: data.pageSize } });
-      const body = resp.data || {};
-      const list = body.list || (body.data && body.data.list) || [];
-      data.emp_list = list;
-      data.total = body.total || (body.data && body.data.total) || list.length;
-      buildDeptAndRoleLists(body.list || (body.data && body.data.list) || list);
+      // 后端可能返回全量数据或未提供 total，做前端过滤 + 分页
+      // 如果后端没有根据筛选返回数据，前端也可按需要做过滤（这里保守：直接分页当前 list）
+      const start = (data.pageNum - 1) * data.pageSize;
+      data.user_list = (list || []).slice(start, start + data.pageSize);
+      data.total = (list || []).length;
     }
+
+    // 更新部门/角色下拉项
+    buildDeptAndRoleLists(list || []);
   } catch (err) {
     console.error(err);
     ElMessage.error('加载用户列表失败');
-    data.emp_list = [];
+    data.user_list = [];
     data.total = 0;
   }
 };
@@ -303,22 +328,36 @@ const handleAdd = () => {
 
 const preparePayload = (form) => {
   const payload = { ...form };
+  // 解析 departmentVal -> departmentId / departmentName
   if (payload.departmentVal == null) {
     payload.departmentId = null;
   } else if (String(payload.departmentVal).startsWith('name:')) {
     payload.departmentId = null;
+    payload.departmentName = String(payload.departmentVal).slice(5);
   } else {
-    payload.departmentId = Number(payload.departmentVal);
+    const n = Number(payload.departmentVal);
+    payload.departmentId = Number.isNaN(n) ? null : n;
   }
+  // 解析 roleVal -> roleId / roleName
   if (payload.roleVal == null) {
     payload.roleId = null;
   } else if (String(payload.roleVal).startsWith('name:')) {
     payload.roleId = null;
+    payload.roleName = String(payload.roleVal).slice(5);
   } else {
-    payload.roleId = Number(payload.roleVal);
+    const n = Number(payload.roleVal);
+    payload.roleId = Number.isNaN(n) ? null : n;
   }
+
+  // 删除 UI 专用字段
   delete payload.departmentVal;
   delete payload.roleVal;
+
+  // 添加更新时间（后端约定字段名可能为 updated_at 或 updatedAt，两者常见）
+  // 使用 ISO 字符串，后端若需要 timestamp 可自行转换
+  payload.updated_at = new Date().toISOString();
+  payload.updatedAt = payload.updated_at; // 双写以兼容不同后端字段名（如果后端只用一个可以删掉另一个）
+
   return payload;
 };
 
@@ -330,9 +369,11 @@ const save = async () => {
   try {
     const payload = preparePayload(data.form);
     if (data.form.id) {
+      // 更新（也带上更新时间）
       await request.put(`/organization/users/${data.form.id}`, payload);
       ElMessage.success('更新成功');
     } else {
+      // 新增：确保带上当前更新时间
       await request.post('/organization/users', payload);
       ElMessage.success('添加成功');
     }

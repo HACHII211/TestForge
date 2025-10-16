@@ -11,7 +11,7 @@ const router = createRouter({
         {path: 'permission', name: 'permission', meta:{title:'角色权限'},component: () => import('../views/Permission.vue')},
         {path: 'personInfo', name: 'personInfo', meta:{title:'个人信息'},component: () => import('../views/PersonInfo.vue')},
         {path: 'password', name: 'password', meta:{title:'修改密码'},component: () => import('../views/password.vue')},
-        {path: 'schedule', name: 'schedule', meta:{title:'我的日程'},component: () => import('../views/schedule.vue')},
+        {path: 'project', name: 'project', meta:{title:'项目'},component: () => import('../views/Project.vue')},
       ]},
     {path: '/',redirect:'/login'},
     {path: '/404',name :'NotFound',meta:{title: '走丢了~'},component:()=> import('../views/404.vue')},

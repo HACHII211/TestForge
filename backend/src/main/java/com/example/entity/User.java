@@ -11,8 +11,8 @@ public class User{
     private Date updatedAt;      // 更新时间
     private String departmentName;
     private String roleName;
-    private String departmentId;
-    private String roleId;
+    private Integer departmentId;
+    private Integer roleId;
 
     public User() {}
 
@@ -80,13 +80,13 @@ public class User{
 
     public void setRoleName(String roleName) {this.roleName = roleName;}
 
-    public String getDepartmentId() { return departmentId;}
+    public Integer getDepartmentId() { return departmentId;}
 
-    public void setDepartmentId(String departmentId) {this.departmentId = departmentId;}
+    public void setDepartmentId(Integer departmentId) {this.departmentId = departmentId;}
 
-    private String getRoleID() {return roleId;}
+    public Integer getRoleId() {return roleId;}
 
-    private void setRoleID(String roleId) {this.roleId = roleId;}
+    public void setRoleId(Integer roleId) {this.roleId = roleId;}
 
     @Override
     public String toString() {
