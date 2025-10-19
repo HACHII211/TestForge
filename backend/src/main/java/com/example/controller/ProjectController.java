@@ -63,14 +63,14 @@ public class ProjectController {
 
     // 移除成员
     @DeleteMapping("/{id}/users/{userId}")
-    public Result removeProjectUser(@PathVariable Integer id, @PathVariable Integer userId) {
+    public Result removeProjectUser(@PathVariable Integer id, @PathVariable Long userId) {
         projectService.removeUserFromProject(id, userId);
         return Result.success();
     }
 
     // 批量移除成员
     @DeleteMapping("/{id}/users")
-    public Result removeProjectUsersBatch(@PathVariable Integer id, @RequestBody List<Integer> userIds) {
+    public Result removeProjectUsersBatch(@PathVariable Integer id, @RequestBody List<Long> userIds) {
         projectService.removeUsersFromProjectBatch(id, userIds);
         return Result.success();
     }

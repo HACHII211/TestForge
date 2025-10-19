@@ -7,11 +7,11 @@
         Test Forge
       </div>
       <div style="margin-left: 70vw" />
-      <div style="align-items: center; display: flex; width: fit-content">
-        <img :src="data.UN.avatar" alt="" style="border-radius: 50%; width: 55px; height: 50px">
-        <span style="font-size: 20px" v-if="data.UN.role === 'ADM'">{{ data.UN.name }}</span>
-        <span style="font-size: 20px" v-if="data.UN.role === 'EMP'">{{ data.UN.firstName }}</span>
-      </div>
+<!--      <div style="align-items: center; display: flex; width: fit-content">-->
+<!--        <img :src="data.UN.avatar" alt="" style="border-radius: 50%; width: 55px; height: 50px">-->
+<!--        <span style="font-size: 20px" v-if="data.UN.role === 'ADM'">{{ data.UN.name }}</span>-->
+<!--        <span style="font-size: 20px" v-if="data.UN.role === 'EMP'">{{ data.UN.firstName }}</span>-->
+<!--      </div>-->
     </div>
     <!-- 头部区域开始 -->
     <div style="border: 1px solid #ddd; display: flex; flex: 1;">
@@ -34,9 +34,13 @@
             <el-icon><Reading /></el-icon>
             项目
           </el-menu-item>
-          <el-menu-item index="/testforge/organization" v-if="data.UN.role === 'ADM'">
+          <el-menu-item index="/testforge/organization">
             <el-icon><Compass /></el-icon>
             组织
+          </el-menu-item>
+          <el-menu-item index="/testforge/defect">
+            <el-icon><SuitcaseLine /></el-icon>
+            缺陷库
           </el-menu-item>
           <el-menu-item index="/testforge/testCase">
             <el-icon><Calendar /></el-icon>

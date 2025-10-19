@@ -2,7 +2,7 @@ package com.example.entity;
 import java.util.Date;
 public class User{
 
-    private Integer id;          // 用户ID
+    private Long id;          // 用户ID
     private String username;     // 用户名
     private String email;        // 邮箱
     private String password;     // 密码
@@ -16,11 +16,11 @@ public class User{
 
     public User() {}
 
-    public Integer getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(Long id) {
         this.id = id;
     }
 

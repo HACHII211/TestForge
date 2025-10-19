@@ -9,4 +9,7 @@ public interface RolePermissionMapper {
     void deleteByRoleId(Integer roleId);
 
     void insertRolePermission(Integer roleId, Integer permissionId);
+
+    List<Long> selectPermissionIdsByRoleIds(List<Long> roleIds);
+
 }

@@ -5,7 +5,8 @@ const router = createRouter({
   routes: [
     {path: '/testforge', meta:{title:'导航页面'}, component:()=>import('../views/Manager.vue'), children:[
         {path: 'qa', name: 'qa', meta:{title:'智能问答'},component: () => import('../views/QA.vue')},
-        {path: 'testCase',name: 'testCase',meta: { title: '用例管理' },component: () => import('../views/TestCase.vue')},
+        {path: 'testCase',name: 'testCase',meta: { title: '用例库' },component: () => import('../views/TestCase.vue')},
+        {path: 'defect',name: 'defect',meta: { title: '缺陷库' },component: () => import('../views/Defect.vue')},
         {path: 'organization', name: 'organization', meta:{title:'组织'},component: () => import('../views/Organization.vue')},
         {path: 'department', name: 'department', meta:{title:'部门'},component: () => import('../views/Department.vue')},
         {path: 'permission', name: 'permission', meta:{title:'角色权限'},component: () => import('../views/Permission.vue')},

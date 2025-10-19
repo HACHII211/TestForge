@@ -1,20 +1,20 @@
 package com.example.entity;
 
 public class UserRole {
-    private Integer userId;
+    private Long userId;
     private Integer roleId;
 
     public UserRole() {}
-    public UserRole(Integer userId, Integer roleId) {
+    public UserRole(Long userId, Integer roleId) {
         this.userId = userId;
         this.roleId = roleId;
     }
 
-    public Integer getUserId() {
+    public Long getUserId() {
         return userId;
     }
 
-    public void setUserId(Integer userId) {
+    public void setUserId(Long userId) {
         this.userId = userId;
     }
 

@@ -45,7 +45,7 @@ public class ProjectService {
         List<User> list = projectUserMapper.selectUsersByProjectId(projectId);
         return PageInfo.of(list);
     }
-    public void addUserToProject(Integer projectId, Integer userId) {
+    public void addUserToProject(Integer projectId, Long userId) {
         if (projectId == null || userId == null) return;
         // 先检查是否已存在
         Integer exists = projectUserMapper.countUserInProject(projectId, userId);
@@ -55,13 +55,13 @@ public class ProjectService {
     }
 
     // 移除成员
-    public void removeUserFromProject(Integer projectId, Integer userId) {
+    public void removeUserFromProject(Integer projectId, Long userId) {
         if (projectId == null || userId == null) return;
         projectUserMapper.deleteProjectUser(projectId, userId);
     }
 
     // 批量移除成员
-    public void removeUsersFromProjectBatch(Integer projectId, List<Integer> userIds) {
+    public void removeUsersFromProjectBatch(Integer projectId, List<Long> userIds) {
         if (projectId == null || userIds == null || userIds.isEmpty()) return;
         projectUserMapper.deleteProjectUserBatch(projectId, userIds);
     }

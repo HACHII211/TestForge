@@ -11,14 +11,14 @@ public interface ProjectUserMapper {
     List<User> selectUsersByProjectId(@Param("projectId") Integer projectId);
 
     // 统计成员是否已存在
-    Integer countUserInProject(@Param("projectId") Integer projectId, @Param("userId") Integer userId);
+    Integer countUserInProject(@Param("projectId") Integer projectId, @Param("userId") Long userId);
 
     // 添加成员
-    void insertProjectUser(@Param("projectId") Integer projectId, @Param("userId") Integer userId);
+    void insertProjectUser(@Param("projectId") Integer projectId, @Param("userId") Long userId);
 
     // 移除成员
-    void deleteProjectUser(@Param("projectId") Integer projectId, @Param("userId") Integer userId);
+    void deleteProjectUser(@Param("projectId") Integer projectId, @Param("userId") Long userId);
 
     // 批量移除成员
-    void deleteProjectUserBatch(@Param("projectId") Integer projectId, @Param("userIds") List<Integer> userIds);
+    void deleteProjectUserBatch(@Param("projectId") Integer projectId, @Param("userIds") List<Long> userIds);
 }

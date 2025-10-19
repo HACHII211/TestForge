@@ -20,6 +20,10 @@ mybatis:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
     map-underscore-to-camel-case: true
 
+jwt:
+  secret: change-me-super-secret
+  expire-ms: 86400000
+
 springdoc:
   swagger-ui:
     path: "/swagger-ui.html"

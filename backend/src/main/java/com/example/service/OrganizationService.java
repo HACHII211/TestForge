@@ -35,7 +35,7 @@ public class OrganizationService {
     public void createUserWithRole(User user) {
         organizationMapper.addUser(user);
         Integer roleId = user.getRoleId();
-        Integer userId = user.getId();
+        Long userId = user.getId();
         if (userId == null) {
             throw new IllegalStateException("插入 user 未返回 id，请确认 mapper 配置 useGeneratedKeys/selectKey 是否正确");
         }
@@ -59,7 +59,7 @@ public class OrganizationService {
         // 更新 user 信息
         organizationMapper.updateUser(user);
 
-        Integer userId = user.getId();
+        Long userId = user.getId();
         Integer roleId = user.getRoleId();
         if (userId == null) {
             throw new IllegalStateException("user id 为空，无法更新关联表");

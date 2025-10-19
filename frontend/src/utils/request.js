@@ -9,21 +9,25 @@ const request = axios.create({
         'Content-Type': 'application/json'
     }
 });
-const loadImage = (imageUrl) => {
-    const token = localStorage.getItem('jwt');
-    return axios.get(imageUrl, {
-        headers: {
-            'Authorization': token,
-        },
-        responseType: 'blob'  // 重要：将响应类型设置为blob，适用于图片加载
-    });
+
+function getStoredToken() {
+    return localStorage.getItem('auth.token') || localStorage.getItem('jwt') || null;
 }
-// ✅ 请求拦截器 —— 每次请求自动携带 jwt
+function saveTokenFromHeader(headerToken) {
+    if (!headerToken) return;
+    const normalized = headerToken.startsWith('Bearer ') ? headerToken.substring(7) : headerToken;
+    localStorage.setItem('auth.token', normalized);
+}
+function toAuthHeader(token) {
+    if (!token) return undefined;
+    return `Bearer ${token}`;
+}
+
 request.interceptors.request.use(
     config => {
-        const token = localStorage.getItem('jwt');
+        const token = getStoredToken();
         if (token) {
-            config.headers['Authorization'] = token;
+            config.headers['Authorization'] = toAuthHeader(token);
         }
         return config;
     },
@@ -32,18 +36,30 @@ request.interceptors.request.use(
     }
 );
 
-// ✅ 响应拦截器 —— 统一处理响应，包括 401 跳转
+export const loadImage = (imageUrl) => {
+    const token = getStoredToken();
+    const headers = {};
+    if (token) headers['Authorization'] = toAuthHeader(token);
+    return request.get(imageUrl, {
+        headers,
+        responseType: 'blob'
+    });
+};
+
 request.interceptors.response.use(
     response => {
         let res = response.data;
+
         if (typeof res === 'string') {
-            res = res ? JSON.parse(res) : res;
+            try {
+                res = res ? JSON.parse(res) : res;
+            } catch (e) {
+            }
         }
 
-        // 如果后端返回新的 token（例如刷新机制），可以更新本地
-        const token = response.headers['authorization'];
-        if (token) {
-            localStorage.setItem('jwt', token);
+        const returnedAuth = response.headers && (response.headers['authorization'] || response.headers['Authorization']);
+        if (returnedAuth) {
+            saveTokenFromHeader(returnedAuth);
         }
 
         return res;
@@ -60,7 +76,7 @@ request.interceptors.response.use(
 
         if (status === 401) {
             ElMessage.error('登录状态失效，请重新登录');
-            localStorage.removeItem('jwt'); // 清除本地 token
+            localStorage.removeItem('auth.token'); // 清除本地 token
             window.location.href = '/login'; // 跳转到登录页
         } else if (status === 404) {
             ElMessage.error('接口不存在');

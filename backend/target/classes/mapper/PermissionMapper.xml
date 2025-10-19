@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.PermissionMapper">
+
+    <resultMap id="PermissionMap" type="com.example.entity.Permission">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <select id="selectAll" resultMap="PermissionMap">
+        SELECT id, name, description, created_at, updated_at
+        FROM `permission`
+        ORDER BY id
+    </select>
+
+    <select id="selectById" parameterType="int" resultMap="PermissionMap">
+        SELECT id, name, description, created_at, updated_at
+        FROM `permission`
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.example.entity.Permission" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO `permission` (name, description, created_at, updated_at)
+        VALUES (#{name}, #{description}, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="com.example.entity.Permission">
+        UPDATE `permission`
+        SET
+            name = #{name},
+            description = #{description},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="int">
+        DELETE FROM `permission` WHERE id = #{id}
+    </delete>
+
+    <select id="selectNamesByIds" resultType="string">
+        SELECT name FROM permission WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="selectNamesByRoleIds" parameterType="java.util.List" resultType="string">
+        <choose>
+            <when test="roleIds != null and roleIds.size() &gt; 0">
+                SELECT DISTINCT p.name
+                FROM `permission` p
+                JOIN `role_permission` rp ON p.id = rp.permission_id
+                WHERE rp.role_id IN
+                <foreach collection="roleIds" item="rid" open="(" separator="," close=")">
+                    #{rid}
+                </foreach>
+            </when>
+            <otherwise>
+                SELECT DISTINCT p.name FROM `permission` p WHERE 1 = 0
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectByIds" parameterType="java.util.List" resultMap="PermissionMap">
+        <choose>
+            <when test="ids != null and ids.size() &gt; 0">
+                SELECT id, name, description, created_at, updated_at
+                FROM `permission`
+                WHERE id IN
+                <foreach collection="ids" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+                ORDER BY id
+            </when>
+            <otherwise>
+                SELECT id, name, description, created_at, updated_at FROM `permission` WHERE 1 = 0
+            </otherwise>
+        </choose>
+    </select>
+
+</mapper>

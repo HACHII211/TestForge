@@ -14,11 +14,6 @@ public class ModuleController {
     @Resource
     private ModuleService moduleService;
 
-    /**
-     * 分页查询模块，支持按 name 模糊搜索，以及按 projectId 过滤
-     * 示例：
-     * GET /modules?projectId=1&name=auth&pageNum=1&pageSize=10
-     */
     @GetMapping
     public Result selectModules(
             @RequestParam(required = false) Integer projectId,
