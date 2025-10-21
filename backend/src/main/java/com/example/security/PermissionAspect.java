@@ -21,9 +21,9 @@ import java.util.stream.Collectors;
 public class PermissionAspect {
 
     @Resource
-    private RolePermissionMapper rolePermissionMapper; // 假定存在的 Mapper
+    private RolePermissionMapper rolePermissionMapper;
     @Resource
-    private PermissionMapper permissionMapper;         // 假定存在的 Mapper
+    private PermissionMapper permissionMapper;
 
     @Pointcut("@annotation(com.example.security.RequiresPermission)")
     public void permissionPointcut() {}
@@ -44,19 +44,16 @@ public class PermissionAspect {
             throw new AccessDeniedRuntimeException("No roles found, access denied");
         }
 
-        // 1) 通过 roleIds 查 permissionIds（去重）
         List<Long> permIds = rolePermissionMapper.selectPermissionIdsByRoleIds(roleIds);
         if (permIds == null || permIds.isEmpty()) {
             throw new AccessDeniedRuntimeException("No permissions assigned to roles");
         }
 
-        // 2) 通过 permissionIds 查 permission name
         List<String> permNames = permissionMapper.selectNamesByIds(permIds);
 
         Set<String> permNameSet = permNames.stream().collect(Collectors.toSet());
         if (!permNameSet.contains(required)) {
             throw new AccessDeniedRuntimeException("Permission denied: " + required);
         }
-        // else 放行
     }
 }

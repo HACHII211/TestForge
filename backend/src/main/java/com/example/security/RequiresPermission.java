@@ -1,4 +1,3 @@
-// RequiresPermission.java
 package com.example.security;
 
 import java.lang.annotation.*;

@@ -69,8 +69,8 @@
         <div class="card right-card">
           <div class="right-toolbar">
             <div class="left-actions">
-              <el-button type="danger" @click="deleteSelected" :disabled="!selectedRows.length">批量删除</el-button>
-              <el-button type="primary" @click="openAddDrawer" style="margin-left: 8px">新增缺陷</el-button>
+              <el-button type="danger" @click="deleteSelected" :disabled="!selectedRows.length" v-if="hasPermission('defect_manage')">批量删除</el-button>
+              <el-button type="primary" @click="openAddDrawer" style="margin-left: 8px" v-if="hasPermission('defect_manage')">新增缺陷</el-button>
             </div>
 
             <div class="right-actions">
@@ -87,7 +87,7 @@
                 :row-key="row => row.id"
                 style="width: 100%; min-width: 800px"
             >
-              <el-table-column type="selection" width="55" />
+              <el-table-column type="selection" width="55" v-if="hasPermission('defect_manage')"/>
               <el-table-column prop="id" label="ID" width="90" />
               <el-table-column prop="title" label="标题" min-width="260" />
               <el-table-column label="优先级" width="120">
@@ -135,7 +135,7 @@
                 </template>
               </el-table-column>
 
-              <el-table-column label="操作" width="160" fixed="right">
+              <el-table-column label="操作" width="160" fixed="right" v-if="hasPermission('defect_manage')">
                 <template #default="scope">
                   <span class="action-link" @click="openEditDrawer(scope.row)">编辑</span>
                   <span class="action-link danger" @click="confirmDelete(scope.row)">删除</span>
@@ -245,6 +245,7 @@
 import { reactive, ref, computed, onMounted } from 'vue';
 import request from '@/utils/request.js';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { hasPermission } from '@/utils/perm';
 
 const state = reactive({
   projects: [],

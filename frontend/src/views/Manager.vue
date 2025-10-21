@@ -50,14 +50,14 @@
             <el-icon><el-icon-chat-dot-square /></el-icon>
             智能助手
           </el-menu-item>
-          <el-sub-menu>
-            <template #title>
-              <span><el-icon><User /></el-icon></span>
-              <span>用户中心</span>
-            </template>
-            <el-menu-item index="/testforge/personInfo">用户信息</el-menu-item>
-            <el-menu-item index="/testforge/password">修改密码</el-menu-item>
-          </el-sub-menu>
+<!--          <el-sub-menu>-->
+<!--            <template #title>-->
+<!--              <span><el-icon><User /></el-icon></span>-->
+<!--              <span>用户中心</span>-->
+<!--            </template>-->
+<!--            <el-menu-item index="/testforge/personInfo">用户信息</el-menu-item>-->
+<!--            <el-menu-item index="/testforge/password">修改密码</el-menu-item>-->
+<!--          </el-sub-menu>-->
           <el-menu-item @click="logOut">
             <el-icon><SwitchButton /></el-icon>
             退出登录
@@ -98,10 +98,9 @@ const logOut = () => {
       }
   )
       .then(() => {
-        // 用户点击“确定”后的操作
-        // 清除本地存储中的用户信息
-        localStorage.removeItem('UN');
-        localStorage.removeItem('jwt');
+        localStorage.removeItem('auth.expiresAt');
+        localStorage.removeItem('auth.token');
+        localStorage.removeItem('app_permissions');
 
         // 跳转到登录页面
         location.href = '/login';

@@ -1,4 +1,5 @@
 package com.example.controller;
+import com.example.security.RequiresPermission;
 import com.example.service.OrganizationService;
 import com.example.common.Result;
 import com.example.entity.User;
@@ -28,19 +29,21 @@ public class OrganizationController {
         return Result.success(pageInfo);
     }
 
-
+    @RequiresPermission("USER_MANAGE")
     @PostMapping("/users")
     public Result createUserWithRole(@RequestBody User user){
         organizationService.createUserWithRole(user);
         return Result.success();
     }
 
+    @RequiresPermission("USER_MANAGE")
     @DeleteMapping("/users/{id}")
     public Result deleteUser(@PathVariable Integer id){
         organizationService.deleteUser(id);
         return Result.success();
     }
 
+    @RequiresPermission("USER_MANAGE")
     @PutMapping("/users/{id}")
     public Result updateUserWithRole(@RequestBody User user){
         System.out.println(user);

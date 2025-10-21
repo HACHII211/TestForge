@@ -1,5 +1,6 @@
 package com.example.controller;
 
+import com.example.security.RequiresPermission;
 import com.example.service.TestCaseService;
 import com.example.common.Result;
 import com.example.entity.TestCase;
@@ -14,9 +15,7 @@ public class TestCaseController {
     @Resource
     private TestCaseService testCaseService;
 
-    /**
-     * 分页查询用例，支持按 title 模糊搜索
-     */
+
     @GetMapping
     public Result selectTestCases(
             @RequestParam(required = false) String title,
@@ -32,27 +31,21 @@ public class TestCaseController {
         return Result.success(pageInfo);
     }
 
-    /**
-     * 根据 id 获取单条用例
-     */
+    @RequiresPermission("TESTCASE_MANAGE")
     @GetMapping("/{id}")
     public Result getById(@PathVariable Integer id) {
         TestCase testCase = testCaseService.selectById(id);
         return Result.success(testCase);
     }
 
-    /**
-     * 新增用例
-     */
+    @RequiresPermission("TESTCASE_MANAGE")
     @PostMapping
     public Result addTestCase(@RequestBody TestCase testCase) {
         testCaseService.addTestCase(testCase);
         return Result.success();
     }
 
-    /**
-     * 更新用例（路径包含 id，保险起见将请求体 id 覆盖为 path id）
-     */
+    @RequiresPermission("TESTCASE_MANAGE")
     @PutMapping("/{id}")
     public Result updateTestCase(@PathVariable Integer id, @RequestBody TestCase testCase) {
         testCase.setId(id);
@@ -60,9 +53,7 @@ public class TestCaseController {
         return Result.success();
     }
 
-    /**
-     * 删除用例
-     */
+    @RequiresPermission("TESTCASE_MANAGE")
     @DeleteMapping("/{id}")
     public Result deleteTestCase(@PathVariable Integer id) {
         testCaseService.deleteTestCase(id);

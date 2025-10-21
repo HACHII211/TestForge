@@ -1,5 +1,6 @@
 package com.example.controller;
 
+import com.example.security.RequiresPermission;
 import com.example.service.ProjectService;
 import com.example.common.Result;
 import com.example.entity.Project;
@@ -17,9 +18,6 @@ public class ProjectController {
     @Resource
     private ProjectService projectService;
 
-    /**
-     * 分页查询项目，支持按 name 模糊搜索
-     */
     @GetMapping
     public Result selectProjects(
             @RequestParam(required = false) String name,
@@ -35,9 +33,7 @@ public class ProjectController {
         return Result.success(pageInfo);
     }
 
-    /**
-     * 根据 id 获取单个项目
-     */
+
     @GetMapping("/{id}")
     public Result getById(@PathVariable Integer id) {
         Project project = projectService.selectById(id);
@@ -54,39 +50,35 @@ public class ProjectController {
         return Result.success(pageInfo);
     }
 
-    // 添加成员
+    @RequiresPermission("PROJECT_MANAGE")
     @PostMapping("/{id}/users")
     public Result addProjectUser(@PathVariable Integer id, @RequestBody User user) {
         projectService.addUserToProject(id, user.getId());
         return Result.success();
     }
 
-    // 移除成员
+    @RequiresPermission("PROJECT_MANAGE")
     @DeleteMapping("/{id}/users/{userId}")
     public Result removeProjectUser(@PathVariable Integer id, @PathVariable Long userId) {
         projectService.removeUserFromProject(id, userId);
         return Result.success();
     }
 
-    // 批量移除成员
+    @RequiresPermission("PROJECT_MANAGE")
     @DeleteMapping("/{id}/users")
     public Result removeProjectUsersBatch(@PathVariable Integer id, @RequestBody List<Long> userIds) {
         projectService.removeUsersFromProjectBatch(id, userIds);
         return Result.success();
     }
 
-    /**
-     * 新增项目
-     */
+    @RequiresPermission("PROJECT_MANAGE")
     @PostMapping
     public Result addProject(@RequestBody Project project) {
         projectService.addProject(project);
         return Result.success();
     }
 
-    /**
-     * 更新项目（路径包含 id，保险起见将请求体 id 覆盖为 path id）
-     */
+    @RequiresPermission("PROJECT_MANAGE")
     @PutMapping("/{id}")
     public Result updateProject(@PathVariable Integer id, @RequestBody Project project) {
         project.setId(id);
@@ -94,9 +86,7 @@ public class ProjectController {
         return Result.success();
     }
 
-    /**
-     * 删除项目
-     */
+    @RequiresPermission("PROJECT_MANAGE")
     @DeleteMapping("/{id}")
     public Result deleteProject(@PathVariable Integer id) {
         projectService.deleteProject(id);

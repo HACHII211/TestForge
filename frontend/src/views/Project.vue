@@ -29,7 +29,9 @@
             @click="activeTab = 'basic'"
         >
           <div class="item-title">基本信息</div>
-          <div class="item-sub">查看/编辑项目基础信息</div>
+          <div class="item-sub">
+            {{ hasPermission('project_manage') ? '查看/编辑项目基础信息' : '查看项目基础信息' }}
+          </div>
         </div>
       </div>
 
@@ -40,8 +42,13 @@
             :class="{ active: activeTab === 'members' }"
             @click="activeTab = 'members'"
         >
-          <div class="item-title">成员管理</div>
-          <div class="item-sub">管理项目成员</div>
+          <div class="item-title">
+            {{ hasPermission('project_manage') ? '成员管理' : '成员' }}
+          </div>
+          <div class="item-sub">
+            {{ hasPermission('project_manage') ? '查看项目成员' : '查看成员信息' }}
+
+          </div>
         </div>
       </div>
 
@@ -57,7 +64,7 @@
       <el-card v-if="activeTab === 'basic'" class="content-card">
         <div class="card-header">
           <div class="card-title">项目基本信息</div>
-          <div class="card-actions">
+          <div v-if="hasPermission('project_manage')" class="card-actions">
             <el-button
                 v-if="!editMode"
                 type="primary"
@@ -125,15 +132,17 @@
       <!-- 成员管理 卡片 -->
       <el-card v-if="activeTab === 'members'" class="content-card">
         <div class="card-header">
-          <div class="card-title">成员管理</div>
+          <div class="card-title">
+            {{ hasPermission('project_manage') ? '成员管理' : '成员' }}
+          </div>
           <div class="card-actions">
-            <el-button type="primary" size="small" @click="openAddMember">添加成员</el-button>
+            <el-button type="primary" size="small" v-if="hasPermission('project_manage')" @click="openAddMember">添加成员</el-button>
           </div>
         </div>
 
         <div class="card-body members-body">
           <el-table :data="members" stripe style="width: 100%" @selection-change="onMemberSelectionChange">
-            <el-table-column type="selection" width="55"></el-table-column>
+            <el-table-column type="selection" width="55" v-if="hasPermission('project_manage')"></el-table-column>
 
             <el-table-column prop="username" label="用户名" min-width="100">
               <template #default="{ row }">
@@ -154,7 +163,7 @@
               <template #default="{ row }">{{ row.roleName || '-' }}</template>
             </el-table-column>
 
-            <el-table-column label="操作" width="160">
+            <el-table-column label="操作" v-if="hasPermission('project_manage')" width="160">
               <template #default="{ row }">
                 <span class="action-link" @click="handleRemoveMember(row)">移除</span>
               </template>
@@ -172,7 +181,7 @@
                 layout="total, sizes, prev, pager, next, jumper"
                 :total="membersTotal"
             />
-            <el-button type="danger" size="small" @click="batchRemoveMembers" style="margin-left: 12px">批量移除</el-button>
+            <el-button type="danger" size="small" @click="batchRemoveMembers" v-if="hasPermission('project_manage')" style="margin-left: 12px">批量移除</el-button>
           </div>
         </div>
       </el-card>
@@ -207,7 +216,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import request from '@/utils/request.js';
 import { ElMessage, ElMessageBox } from 'element-plus';
-
+import { hasPermission } from '@/utils/perm';
 const projects = ref([]);
 const selectedProjectId = ref(null);
 const currentProject = ref(null);
@@ -400,7 +409,6 @@ const confirmAddMember = async () => {
     return;
   }
   try {
-    // 使用后端实际接口：POST /projects/{id}/users  body: { id: userId }
     await request.post(`/projects/${selectedProjectId.value}/users`, { id: addMemberForm.userId });
     ElMessage.success('添加成功');
     addMemberVisible.value = false;
@@ -419,7 +427,6 @@ const batchRemoveMembers = async () => {
   try {
     await ElMessageBox.confirm('确定要移除选中的成员吗？', '确认', { type: 'warning' });
     const ids = memberSelected.value.map(u => u.id);
-    // 使用后端接口：DELETE /projects/{id}/users  body: [userId,...]
     await request.delete(`/projects/${selectedProjectId.value}/users`, { data: ids });
     ElMessage.success('移除成功');
     await loadMembers(selectedProjectId.value);

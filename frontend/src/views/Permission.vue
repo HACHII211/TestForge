@@ -1,19 +1,24 @@
 <template>
   <div>
-    <!-- 顶部导航 -->
     <div class="top-links-bar">
       <div class="top-links-inner">
-        <a class="top-link" href="/testforge/organization">组织管理</a>
-        <a class="top-link" href="/testforge/department">部门管理</a>
-        <a class="top-link active" href="/testforge/permission">权限管理</a>
+        <a class="top-link" href="/testforge/organization">
+          {{ hasPermission('project_manage') ? '组织管理' : '组织' }}
+        </a>
+        <a class="top-link" href="/testforge/department">
+          {{ hasPermission('project_manage') ? '部门管理' : '部门' }}
+        </a>
+        <a class="top-link active" href="/testforge/permission">
+          {{ hasPermission('project_manage') ? '权限管理' : '权限' }}
+        </a>
       </div>
     </div>
 
     <div class="card merged-card">
       <!-- 工具条：左侧只有 添加 按钮 -->
-      <div class="toolbar">
+      <div class="toolbar" v-if="hasPermission('user_manage')">
         <div>
-          <el-button type="primary" @click="handleAdd">添加</el-button>
+          <el-button type="primary" @click="handleAdd" >添加</el-button>
         </div>
 
         <div class="toolbar-right">
@@ -24,7 +29,7 @@
 
       <!-- 角色表格 -->
       <el-table :data="data.role_list" @selection-change="handleSelectionChange" style="margin-top: 12px">
-        <el-table-column type="selection" width="55"></el-table-column>
+        <el-table-column type="selection" width="55" v-if="hasPermission('role_manage')"></el-table-column>
 
         <el-table-column prop="id" label="ID" width="90" />
 
@@ -38,7 +43,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="220">
+        <el-table-column label="操作" width="220" v-if="hasPermission('role_manage')">
           <template #default="scope">
             <!-- 改为纯文字操作，保持原行为与间距 -->
             <span class="action-link" @click="handleEdit(scope.row)">编辑</span>
@@ -153,6 +158,7 @@
 import { reactive, ref, computed } from 'vue';
 import request from '@/utils/request.js';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { hasPermission } from '@/utils/perm';
 
 const data = reactive({
   pageNum: 1,
@@ -330,7 +336,7 @@ const handleCurrentChange = (page) => {
  */
 const loadPermissionList = async () => {
   try {
-    const resp = await request.get('/permission');
+    const resp = await request.get('/permissions');
     const body = resp.data || {};
     let list = [];
     if (body.data && Array.isArray(body.data.list)) {

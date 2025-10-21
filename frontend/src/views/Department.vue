@@ -3,9 +3,15 @@
     <!-- 顶部导航 -->
     <div class="top-links-bar">
       <div class="top-links-inner">
-        <a class="top-link" href="/testforge/organization">组织管理</a>
-        <a class="top-link active" href="/testforge/department">部门管理</a>
-        <a class="top-link" href="/testforge/permission">权限管理</a>
+        <a class="top-link" href="/testforge/organization">
+          {{ hasPermission('project_manage') ? '组织管理' : '组织' }}
+        </a>
+        <a class="top-link active" href="/testforge/department">
+          {{ hasPermission('project_manage') ? '部门管理' : '部门' }}
+        </a>
+        <a class="top-link" href="/testforge/permission">
+          {{ hasPermission('project_manage') ? '权限管理' : '权限' }}
+        </a>
       </div>
     </div>
 
@@ -23,14 +29,14 @@
         <el-button type="success" style="margin-left: 10px" @click="restart">重 置</el-button>
 
         <div class="toolbar-right">
-          <el-button type="danger" @click="delBatch">批量删除</el-button>
-          <el-button type="primary" @click="handleAdd" style="margin-left: 10px">添加</el-button>
+          <el-button type="danger" @click="delBatch" v-if="hasPermission('user_manage')">批量删除</el-button>
+          <el-button type="primary" @click="handleAdd" style="margin-left: 10px" v-if="hasPermission('user_manage')">添加</el-button>
         </div>
       </div>
 
       <!-- 表格 -->
       <el-table :data="data.dept_list" @selection-change="handleSelectionChange" style="margin-top: 12px">
-        <el-table-column type="selection" width="55"></el-table-column>
+        <el-table-column type="selection" width="55" ></el-table-column>
 
         <el-table-column label="部门名称" prop="name" min-width="120">
           <template #default="scope">
@@ -59,7 +65,6 @@
                 {{ joinMemberNames(scope.row) }}
               </span>
 
-              <!-- teleport + transition + v-if 动画 -->
               <teleport to="body">
                 <transition name="panel-fade" appear>
                   <div
@@ -104,7 +109,7 @@
         </el-table-column>
 
         <!-- 操作列：改为纯文字风格 -->
-        <el-table-column label="操作" width="160">
+        <el-table-column label="操作" width="160" v-if="hasPermission('user_manage')">
           <template #default="scope">
             <span class="action-link" @click="handleUpdate(scope.row)">编辑</span>
             <span class="action-link danger" @click="handleDel(scope.row.id)">删除</span>
@@ -171,6 +176,7 @@
 import { reactive, ref, onBeforeUnmount } from 'vue';
 import request from '@/utils/request.js';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import {hasPermission} from "@/utils/perm.js";
 
 const data = reactive({
   name: null,

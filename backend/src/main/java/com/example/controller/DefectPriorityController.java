@@ -2,6 +2,7 @@ package com.example.controller;
 
 import com.example.common.Result;
 import com.example.entity.DefectPriority;
+import com.example.security.RequiresPermission;
 import com.example.service.DefectPriorityService;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
@@ -26,22 +27,25 @@ public class DefectPriorityController {
         return Result.success(service.selectById(id));
     }
 
+    @RequiresPermission("DEFECT_MANAGE")
     @PostMapping
     public Result add(@RequestBody DefectPriority p) {
         service.add(p);
         return Result.success(p);
     }
 
+    @RequiresPermission("DEFECT_MANAGE")
+    @DeleteMapping("/{id}")
+    public Result delete(@PathVariable Integer id) {
+        service.delete(id);
+        return Result.success();
+    }
+
+    @RequiresPermission("DEFECT_HANDLE")
     @PutMapping("/{id}")
     public Result update(@PathVariable Integer id, @RequestBody DefectPriority p) {
         p.setId(id);
         service.update(p);
-        return Result.success();
-    }
-
-    @DeleteMapping("/{id}")
-    public Result delete(@PathVariable Integer id) {
-        service.delete(id);
         return Result.success();
     }
 }

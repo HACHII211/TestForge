@@ -102,6 +102,7 @@ import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import request from '@/utils/request.js';
+import { savePermissions } from '@/utils/perm';
 
 const formRef = ref(null);
 const router = (() => {
@@ -118,26 +119,30 @@ const loading = ref(false);
 
 /**
  * 处理后端返回体：兼容 resp.data.token 或 resp.token
+ * 同时返回 permissions
  */
-const extractToken = (resp) => {
+const extractResp = (resp) => {
   const b = resp?.data ?? resp;
   return {
     token: b?.token ?? (b?.data && b.data.token) ?? null,
     expiresAt: b?.expiresAt ?? (b?.data && b.data.expiresAt) ?? null,
+    permissions: b?.permissions ?? (b?.data && b.data.permissions) ?? []
   };
 };
 
 const saveToken = ({ token, expiresAt }) => {
   if (!token) return;
   localStorage.setItem('auth.token', token);
+  localStorage.setItem('auth.token', token);
   if (expiresAt) localStorage.setItem('auth.expiresAt', String(expiresAt));
-  if (remember.value === false) {
-    // 如果不记住，设置一个短时会话（这里演示：30分钟）
-    const expireShort = Date.now() + 1000 * 60 * 30;
-    localStorage.setItem('auth.shortExpire', String(expireShort));
-  } else {
-    localStorage.removeItem('auth.shortExpire');
-  }
+  localStorage.removeItem('auth.shortExpire');
+
+  // 把 token 加到全局 axios header（注意要带上 "Bearer " 前缀）
+  try {
+    if (request?.defaults?.headers && request.defaults.headers.common) {
+      request.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+  } catch (e) { /* ignore */ }
 };
 
 const submit = async () => {
@@ -148,25 +153,20 @@ const submit = async () => {
   loading.value = true;
   try {
     const resp = await request.post('/auth/login', { username: form.username, password: form.password });
-    const { token, expiresAt } = extractToken(resp);
+    const { token, expiresAt, permissions } = extractResp(resp);
     if (!token) {
-      // 兼容后端错误格式
       const msg = (resp?.data && resp.data.message) || (resp?.message) || '登录失败，未返回 token';
       ElMessage.error(msg);
       loading.value = false;
       return;
     }
     saveToken({ token, expiresAt });
+    console.log(permissions)
+    try { savePermissions(permissions || []); } catch (e) { console.warn('savePermissions failed', e); }
 
     ElMessage.success('登录成功');
 
-    try {
-      if (request?.defaults?.headers && request.defaults.headers.common) {
-        request.defaults.headers.common['Authorization'] = `${token}`;
-      }
-    } catch (e) { /* ignore */ }
-
-    // 跳转：优先使用 router（若项目使用 vue-router），否则 emit 事件
+    // 跳转：优先使用 router（若项目使用 vue-router），否则派发事件
     if (router && router.replace) {
       router.replace({ path: '/testforge/testCase' });
     } else {
@@ -174,7 +174,6 @@ const submit = async () => {
     }
   } catch (err) {
     console.error(err);
-    // 兼容性取 message
     const msg = err?.response?.data?.message ?? err?.message ?? '登录失败';
     ElMessage.error(String(msg));
   } finally {
@@ -182,7 +181,6 @@ const submit = async () => {
   }
 };
 
-/* 快速演示登录（仅用于 demo） */
 const demoLogin = () => {
   form.username = 'admin';
   form.password = 'admin123';
@@ -194,20 +192,10 @@ const onForgot = () => {
 };
 </script>
 
+
 <style scoped>
 /* 引入像素风字体（近似 MC） - 可选 */
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
-/* 如果你有真正的 Minecraft 字体文件（.ttf），可以在全局 css 中用 @font-face 引入：
-@font-face {
-  font-family: 'Minecraftia';
-  src: url('/fonts/Minecraftia.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-然后在下面把 font-family 改为 'Minecraftia', 'Press Start 2P', ...
-*/
 
 /* 页面背景 */
 .login-page {

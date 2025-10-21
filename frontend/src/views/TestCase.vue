@@ -30,14 +30,14 @@
         <el-button type="success" style="margin-left: 10px" @click="restart">重 置</el-button>
 
         <div class="toolbar-right">
-          <el-button type="danger" @click="delBatch">批量删除</el-button>
-          <el-button type="primary" @click="handleAdd" style="margin-left: 10px">添加用例</el-button>
+          <el-button type="danger" @click="delBatch" v-if="hasPermission('testcase_manage')">批量删除</el-button>
+          <el-button type="primary" @click="handleAdd" style="margin-left: 10px" v-if="hasPermission('testcase_manage')">添加用例</el-button>
         </div>
       </div>
 
       <!-- 表格：只显示指定列 -->
       <el-table :data="data.case_list" @selection-change="handleSelectionChange" style="margin-top: 12px">
-        <el-table-column type="selection" width="55"></el-table-column>
+        <el-table-column type="selection" width="55" v-if="hasPermission('testcase_manage')"></el-table-column>
 
         <el-table-column label="用例ID" prop="id" width="90"></el-table-column>
 
@@ -91,7 +91,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="180">
+        <el-table-column label="操作" width="180" v-if="hasPermission('testcase_manage')">
           <template #default="scope">
             <span class="action-link" @click="handleUpdate(scope.row)"> 编辑</span>
             <span class="action-link danger" @click="handleDel(scope.row.id)"> 删除</span>
@@ -218,7 +218,7 @@
 import { reactive, ref, computed } from 'vue';
 import request from '@/utils/request.js';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Delete, Edit } from '@element-plus/icons-vue';
+import { hasPermission } from '@/utils/perm';
 
 const data = reactive({
   title: null,

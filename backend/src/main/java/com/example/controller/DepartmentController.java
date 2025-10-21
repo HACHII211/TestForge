@@ -1,5 +1,6 @@
 package com.example.controller;
 
+import com.example.security.RequiresPermission;
 import com.example.service.DepartmentService;
 import com.example.common.Result;
 import com.example.entity.Department;
@@ -34,18 +35,21 @@ public class DepartmentController {
         return Result.success(dept);
     }
 
+    @RequiresPermission("DEPARTMENT_MANAGE")
     @PostMapping
     public Result addDepartment(@RequestBody Department department) {
         departmentService.addDepartment(department);
         return Result.success();
     }
 
+    @RequiresPermission("DEPARTMENT_MANAGE")
     @DeleteMapping("/{id}")
     public Result deleteDepartment(@PathVariable Integer id) {
         departmentService.deleteDepartment(id);
         return Result.success();
     }
 
+    @RequiresPermission("DEPARTMENT_MANAGE")
     @PutMapping("/{id}")
     public Result updateDepartment(@PathVariable Integer id, @RequestBody Department department) {
         // 确保 id 一致（优先 path）

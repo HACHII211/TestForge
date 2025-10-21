@@ -1,11 +1,16 @@
 <template>
   <div>
-    <!-- 顶部导航条（无外层 margin）-->
     <div class="top-links-bar">
       <div class="top-links-inner">
-        <a class="top-link active" href="/testforge/organization">组织管理</a>
-        <a class="top-link" href="/testforge/department">部门管理</a>
-        <a class="top-link" href="/testforge/permission">权限管理</a>
+        <a class="top-link active" href="/testforge/organization">
+          {{ hasPermission('project_manage') ? '组织管理' : '组织' }}
+        </a>
+        <a class="top-link" href="/testforge/department">
+          {{ hasPermission('project_manage') ? '部门管理' : '部门' }}
+        </a>
+        <a class="top-link" href="/testforge/permission">
+          {{ hasPermission('project_manage') ? '权限管理' : '权限' }}
+        </a>
       </div>
     </div>
 
@@ -33,14 +38,14 @@
         <el-button type="success" style="margin-left: 10px" @click="restart">重 置</el-button>
 
         <div class="toolbar-right">
-          <el-button type="danger" @click="delBatch">批量删除</el-button>
-          <el-button type="primary" @click="handleAdd" style="margin-left: 10px">添加</el-button>
+          <el-button type="danger" @click="delBatch"  v-if="hasPermission('user_manage')">批量删除</el-button>
+          <el-button type="primary" @click="handleAdd" style="margin-left: 10px" v-if="hasPermission('project_manage')">添加</el-button>
         </div>
       </div>
 
       <!-- 表格 -->
       <el-table :data="data.user_list" @selection-change="handleSelectionChange" style="margin-top: 12px">
-        <el-table-column type="selection" width="55"></el-table-column>
+        <el-table-column type="selection" width="55" v-if="hasPermission('user_manage')"></el-table-column>
         <el-table-column label="ID" prop="id" width="80"></el-table-column>
 
         <el-table-column label="用户名">
@@ -81,7 +86,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="160">
+        <el-table-column label="操作" width="160" v-if="hasPermission('user_manage')">
           <template #default="scope">
             <span class="action-link" @click="handleUpdate(scope.row)">编辑</span>
             <span class="action-link danger" @click="handleDel(scope.row.id)">删除</span>
@@ -165,6 +170,7 @@
 import { reactive, ref } from 'vue';
 import request from '@/utils/request.js';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { hasPermission } from '@/utils/perm';
 
 const data = reactive({
   id: null,
@@ -231,12 +237,6 @@ const buildDeptAndRoleLists = (list) => {
   data.roles = Array.from(roleMap.values());
 };
 
-/**
- * 将筛选值解析为后端可识别的参数：
- * - numeric 值发送 departmentId / roleId
- * - name:xxx 发送 departmentName / roleName
- * - null 则不发送
- */
 const buildFilterParams = () => {
   const params = {};
   if (data.filterDepartmentVal != null) {
