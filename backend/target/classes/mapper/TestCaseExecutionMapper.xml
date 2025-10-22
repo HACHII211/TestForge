@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.TestCaseExecutionMapper">
+
+    <resultMap id="ExecutionMap" type="com.example.entity.TestCaseExecution">
+        <id column="id" property="id"/>
+        <result column="test_case_id" property="testCaseId"/>
+        <result column="executed_by" property="executedBy"/>
+        <result column="executed_at" property="executedAt"/>
+        <result column="status" property="status"/>
+        <result column="remarks" property="remarks"/>
+        <result column="environment" property="environment"/>
+        <result column="actual_result" property="actualResult"/>
+
+        <!-- joined columns -->
+        <result column="test_case_title" property="testCaseTitle"/>
+        <result column="project_id" property="projectId"/>
+        <result column="project_name" property="projectName"/>
+        <result column="module_id" property="moduleId"/>
+        <result column="module_name" property="moduleName"/>
+        <result column="executed_by_name" property="executedByName"/>
+        <result column="created_by_name" property="createdByName"/>
+    </resultMap>
+
+    <!-- 动态条件查询，PageHelper 在 service 中启动分页 -->
+    <select id="selectAll" resultMap="ExecutionMap" parameterType="map">
+        SELECT
+        e.id,
+        e.test_case_id,
+        e.executed_by,
+        e.executed_at,
+        e.status,
+        e.remarks,
+        e.environment,
+        e.actual_result,
+        t.title AS test_case_title,
+        pr.id AS project_id, pr.name AS project_name,
+        m.id AS module_id, m.name AS module_name,
+        u_exec.username AS executed_by_name,
+        u_creator.username AS created_by_name
+        FROM test_case_execution e
+        LEFT JOIN test_case t ON e.test_case_id = t.id
+        LEFT JOIN project pr ON t.project_id = pr.id
+        LEFT JOIN module m ON t.module_id = m.id
+        LEFT JOIN user u_exec ON e.executed_by = u_exec.id
+        LEFT JOIN user u_creator ON t.created_by = u_creator.id
+        WHERE 1=1
+        <!-- filter by testCaseId -->
+        <if test="testCaseId != null">
+            AND e.test_case_id = #{testCaseId}
+        </if>
+        <!-- filter by projectId -->
+        <if test="projectId != null">
+            AND pr.id = #{projectId}
+        </if>
+        <!-- filter by moduleId -->
+        <if test="moduleId != null">
+            AND m.id = #{moduleId}
+        </if>
+        <!-- filter by status (exact match) -->
+        <if test="status != null and status != ''">
+            AND e.status = #{status}
+        </if>
+        <!-- filter by executedBy -->
+        <if test="executedBy != null">
+            AND e.executed_by = #{executedBy}
+        </if>
+        <!-- filter by executed_at date range -->
+        <if test="dateFrom != null and dateFrom != ''">
+            AND e.executed_at &gt;= #{dateFrom}
+        </if>
+        <if test="dateTo != null and dateTo != ''">
+            AND e.executed_at &lt;= #{dateTo}
+        </if>
+
+        ORDER BY e.executed_at DESC
+    </select>
+
+    <!-- 根据 id 查询 -->
+    <select id="selectById" parameterType="int" resultMap="ExecutionMap">
+        SELECT
+            e.id,
+            e.test_case_id,
+            e.executed_by,
+            e.executed_at,
+            e.status,
+            e.remarks,
+            e.environment,
+            e.actual_result,
+            t.title AS test_case_title,
+            pr.id AS project_id, pr.name AS project_name,
+            m.id AS module_id, m.name AS module_name,
+            u_exec.username AS executed_by_name,
+            u_creator.username AS created_by_name
+        FROM test_case_execution e
+                 LEFT JOIN test_case t ON e.test_case_id = t.id
+                 LEFT JOIN project pr ON t.project_id = pr.id
+                 LEFT JOIN module m ON t.module_id = m.id
+                 LEFT JOIN user u_exec ON e.executed_by = u_exec.id
+                 LEFT JOIN user u_creator ON t.created_by = u_creator.id
+        WHERE e.id = #{id}
+    </select>
+
+    <!-- 插入：useGeneratedKeys 回填 id -->
+    <insert id="insertExecution" parameterType="com.example.entity.TestCaseExecution" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO test_case_execution
+        (test_case_id, executed_by, executed_at, status, remarks, environment, actual_result)
+        VALUES
+            (#{testCaseId}, #{executedBy}, #{executedAt}, #{status}, #{remarks}, #{environment}, #{actualResult})
+    </insert>
+
+    <!-- 更新 -->
+    <update id="updateExecution" parameterType="com.example.entity.TestCaseExecution">
+        UPDATE test_case_execution
+        SET
+            test_case_id = #{testCaseId},
+            executed_by = #{executedBy},
+            executed_at = #{executedAt},
+            status = #{status},
+            remarks = #{remarks},
+            environment = #{environment},
+            actual_result = #{actualResult}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除 -->
+    <delete id="deleteExecution" parameterType="int">
+        DELETE FROM test_case_execution WHERE id = #{id}
+    </delete>
+
+    <!-- 批量删除 -->
+    <delete id="deleteBatch" parameterType="list">
+        DELETE FROM test_case_execution WHERE id IN
+        <foreach collection="list" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

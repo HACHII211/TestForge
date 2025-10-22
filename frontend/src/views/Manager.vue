@@ -26,10 +26,10 @@
 <!--            <el-icon><Money /></el-icon>-->
 <!--            员工信息-->
 <!--          </el-menu-item>-->
-<!--          <el-menu-item index="/testforge/admin" v-if="data.UN.role === 'ADM'">-->
-<!--            <el-icon><SuitcaseLine /></el-icon>-->
-<!--            管理员信息-->
-<!--          </el-menu-item>-->
+          <el-menu-item index="/testforge/testPlan">
+            <el-icon><SuitcaseLine /></el-icon>
+            测试计划
+          </el-menu-item>
           <el-menu-item index="/testforge/project">
             <el-icon><Reading /></el-icon>
             项目

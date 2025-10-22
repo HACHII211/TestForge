@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.TestPlanMapper">
+
+    <resultMap id="TestPlanMap" type="com.example.entity.TestPlan">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="project_id" property="projectId"/>
+        <result column="module_id" property="moduleId"/>
+        <result column="description" property="description"/>
+        <result column="owner_id" property="ownerId"/>
+        <result column="status" property="status"/>
+        <result column="start_date" property="startDate"/>
+        <result column="end_date" property="endDate"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <!-- 条件查询（用于分页） -->
+    <select id="selectAll" parameterType="map" resultMap="TestPlanMap">
+        SELECT id, name, project_id, module_id, description, owner_id, status, start_date, end_date, created_at, updated_at
+        FROM test_plan
+        WHERE 1=1
+        <if test="name != null and name != ''">
+            AND name LIKE CONCAT('%', #{name}, '%')
+        </if>
+        <if test="projectId != null">
+            AND project_id = #{projectId}
+        </if>
+        <if test="moduleId != null">
+            AND module_id = #{moduleId}
+        </if>
+        <if test="ownerId != null">
+            AND owner_id = #{ownerId}
+        </if>
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        <if test="dateFrom != null and dateFrom != ''">
+            AND created_at &gt;= #{dateFrom}
+        </if>
+        <if test="dateTo != null and dateTo != ''">
+            AND created_at &lt;= #{dateTo}
+        </if>
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 按名称查询（简单） -->
+    <select id="selectByName" parameterType="string" resultMap="TestPlanMap">
+        SELECT id, name, project_id, module_id, description, owner_id, status, start_date, end_date, created_at, updated_at
+        FROM test_plan
+        WHERE name LIKE CONCAT('%', #{name}, '%')
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 根据 id 查询 -->
+    <select id="selectById" parameterType="int" resultMap="TestPlanMap">
+        SELECT id, name, project_id, module_id, description, owner_id, status, start_date, end_date, created_at, updated_at
+        FROM test_plan WHERE id = #{id}
+    </select>
+
+    <!-- 插入（回填 id） -->
+    <insert id="insertTestPlan" parameterType="com.example.entity.TestPlan" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO test_plan (name, project_id, module_id, description, owner_id, status, start_date, end_date, created_at, updated_at)
+        VALUES (#{name}, #{projectId}, #{moduleId}, #{description}, #{ownerId}, #{status}, #{startDate}, #{endDate}, NOW(), NOW())
+    </insert>
+
+    <!-- 更新 -->
+    <update id="updateTestPlan" parameterType="com.example.entity.TestPlan">
+        UPDATE test_plan
+        SET
+            name = #{name},
+            project_id = #{projectId},
+            module_id = #{moduleId},
+            description = #{description},
+            owner_id = #{ownerId},
+            status = #{status},
+            start_date = #{startDate},
+            end_date = #{endDate},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除 -->
+    <delete id="deleteTestPlan" parameterType="int">
+        DELETE FROM test_plan WHERE id = #{id}
+    </delete>
+
+    <!-- 删除计划下所有用例的关联（用于覆盖式设置） -->
+    <delete id="deletePlanTestcases" parameterType="int">
+        DELETE FROM test_plan_testcase WHERE test_plan_id = #{planId}
+    </delete>
+
+    <!-- 批量插入计划-用例关联：params.map -> planId, caseIds(list) -->
+    <insert id="insertPlanTestcases" parameterType="map">
+        INSERT INTO test_plan_testcase (test_plan_id, test_case_id, added_by, added_at)
+        VALUES
+        <foreach collection="caseIds" item="cid" separator="," open="" close="">
+            (#{planId}, #{cid}, NULL, NOW())
+        </foreach>
+    </insert>
+
+    <!-- 查询某计划下的用例 id 列表 -->
+    <select id="selectCaseIdsByPlanId" parameterType="int" resultType="int">
+        SELECT test_case_id FROM test_plan_testcase WHERE test_plan_id = #{planId} ORDER BY added_at
+    </select>
+
+
+</mapper>

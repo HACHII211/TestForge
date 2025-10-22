@@ -1,5 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+const TestPlanList = () => import('@/views/TestPlanList.vue');
+const TestPlanDetail = () => import('@/views/TestPlanDetail.vue');
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -11,6 +14,8 @@ const router = createRouter({
         {path: 'department', name: 'department', meta:{title:'部门'},component: () => import('../views/Department.vue')},
         {path: 'permission', name: 'permission', meta:{title:'角色权限'},component: () => import('../views/Permission.vue')},
         {path: 'personInfo', name: 'personInfo', meta:{title:'个人信息'},component: () => import('../views/PersonInfo.vue')},
+        {path: 'testPlan', name: 'testPlan', meta:{title:'测试计划'},component: () => import('../views/TestPlanList.vue')},
+        {path: '/test-plan/testPlanDetail', name: 'TestPlanDetail', component: TestPlanDetail, props: route => ({ id: route.query.id }), meta: { title: '测试计划详情'}},
         {path: 'password', name: 'password', meta:{title:'修改密码'},component: () => import('../views/password.vue')},
         {path: 'project', name: 'project', meta:{title:'项目'},component: () => import('../views/Project.vue')},
       ]},

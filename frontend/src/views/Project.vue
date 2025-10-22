@@ -190,14 +190,9 @@
     <!-- 添加成员对话框 -->
     <el-dialog title="添加成员到项目" v-model="addMemberVisible" width="600" destroy-on-close>
       <el-form :model="addMemberForm" label-width="100px">
-        <el-form-item label="选择用户" prop="userId">
+        <el-form-item label="选择用户" prop="userId" style="margin-top: 30px">
           <el-select v-model="addMemberForm.userId" filterable placeholder="选择用户">
             <el-option v-for="u in allUsers" :key="u.id" :label="u.username || ('ID:' + u.id)" :value="u.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="角色">
-          <el-select v-model="addMemberForm.roleId" placeholder="选择角色（可选）">
-            <el-option v-for="r in roles" :key="r.id" :label="r.name" :value="r.id" />
           </el-select>
         </el-form-item>
       </el-form>
