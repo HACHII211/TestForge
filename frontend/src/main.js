@@ -14,18 +14,15 @@ import request from '@/utils/request';              // 你的 axios 实例（确
 
 const app = createApp(App);
 
-// 注册 Element Plus（含中文）
 app.use(router);
 app.use(ElementPlus, {
     locale: zhCn,
 });
 
-// 注册 Element Plus icons（保持你原来的写法）
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
     app.component(key, component);
 }
 
-// 注册权限指令 v-perm
 console.log('permDirective:', permDirective);
 app.use(permDirective); // 确认这行确实执行
 console.log('perm directive registered');

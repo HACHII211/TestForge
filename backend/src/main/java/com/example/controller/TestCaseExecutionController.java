@@ -6,7 +6,7 @@ import com.example.service.TestCaseExecutionService;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
-
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +51,7 @@ public class TestCaseExecutionController {
 
     @PostMapping
     public Result add(@RequestBody TestCaseExecution execution) {
+        execution.setExecutedAt(new Date());
         executionService.addExecution(execution);
         return Result.success();
     }
@@ -58,6 +59,7 @@ public class TestCaseExecutionController {
     @PutMapping("/{id}")
     public Result update(@PathVariable Integer id, @RequestBody TestCaseExecution execution) {
         execution.setId(id);
+        execution.setExecutedAt(new Date());
         executionService.updateExecution(execution);
         return Result.success();
     }

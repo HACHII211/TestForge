@@ -48,7 +48,7 @@
           </el-menu-item>
           <el-menu-item index="/testforge/qa">
             <el-icon><el-icon-chat-dot-square /></el-icon>
-            智能助手
+            TFBots
           </el-menu-item>
 <!--          <el-sub-menu>-->
 <!--            <template #title>-->

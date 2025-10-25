@@ -1,496 +1,368 @@
 <template>
-  <div class="chat-wrapper">
-    <div class="chat-container">
-      <!-- 聊天内容区 -->
-      <div class="messages-area">
+  <div class="chat-container">
+    <!-- 主聊天区域 -->
+    <div class="chat-messages" ref="messagesContainer">
+      <div class="messages-wrapper">
         <div
-            v-for="(msg, index) in displayedMessages"
+            v-for="(message, index) in messages"
             :key="index"
-            class="message-bubble"
-            :class="msg.role"
+            :class="['message', message.role === 'user' ? 'user-message' : 'ai-message']"
         >
-          <!-- 普通助手 -->
-          <div
-              v-if="msg.role === 'assistant'"
-              class="bubble-content"
-              v-html="msg.content"
-          ></div>
+          <!-- 用户消息 -->
+          <template v-if="message.role === 'user'">
+            <div class="message-content user-content">
+              <div class="message-text">{{ message.content }}</div>
+              <div class="message-time">{{ message.time }}</div>
+            </div>
+          </template>
 
-          <!-- 用户输入 -->
-          <div v-else-if="msg.role === 'user'" class="bubble-content">
-            {{ msg.content }}
-          </div>
+          <!-- AI 消息 -->
+          <template v-else>
+            <div class="message-content ai-content">
+              <!-- AI 处理状态提示 -->
+              <div v-if="message.status_message" class="ai-status-message">
+                <p>{{ message.status_message }}</p>
+                <div v-if="message.status_message !== '用户中止'" class="shimmer"></div>
+              </div>
+              <!-- 多用例数组 -->
+              <template v-if="isTestCaseJson(message.content)">
+                <template v-if="Array.isArray(parseTestCase(message.content))">
+                  <TestCaseCard
+                      v-for="(test, i) in parseTestCase(message.content)"
+                      :key="i"
+                      :testCase="test"
+                  />
+                </template>
+                <!-- 单用例对象 -->
+                <template v-else>
+                  <TestCaseCard :testCase="parseTestCase(message.content)" />
+                </template>
+              </template>
 
-          <!-- 思考气泡 -->
-          <div
-              v-else-if="msg.role === 'thinking'"
-              class="bubble-content thinking-content"
-              v-html="msg.content"
-          ></div>
-        </div>
-
-      </div>
-
-      <!-- 输入区 -->
-      <div class="input-bubble">
-        <div class="bubble-form">
-          <div class="db-search-switch">
-            <el-switch v-model="dbSearch" />
-            <span class="db-search-label">数据库检索</span>
-          </div>
-          <div class="db-search-switch" style="margin-left: 126px">
-            <el-switch v-model="isThinking" />
-            <span class="db-search-label">深度思考🧠</span>
-          </div>
-
-          <el-input
-              v-model="inputText"
-              type="textarea"
-              placeholder="✏️ 请输入内容..."
-              :autosize="{ minRows: 2, maxRows: 4 }"
-              class="cute-input"
-              @keydown.enter.prevent="sendMessage"
-          ></el-input>
-          <el-button
-              :disabled="isLoading || !inputText.trim()"
-              class="send-button"
-              :class="{ active: inputText.trim() && !isLoading }"
-              @click="sendMessage"
-          >
-            <el-icon :size="20" class="send-icon">
-              <svg v-if="isLoading" viewBox="0 0 1024 1024" class="loading-icon">
-                <path
-                    fill="currentColor"
-                    d="M512 1024c-69.1 0-136.2-13.5-199.3-40.2C251.7 958 197 921 150 874c-47-47-84-101.7-109.8-162.7C13.5 648.2 0 581.1 0 512c0-19.9 16.1-36 36-36s36 16.1 36 36c0 59.4 11.6 117 34.6 171.3 22.2 52.4 53.9 98.8 94.3 136.3 40.4 37.5 88.7 66.9 142.7 87.5 50.4 19.5 104 29.5 158.4 29.5 19.9 0 36 16.1 36 36s-16.1 36-36 36z"
-                />
-              </svg>
-              <svg v-else-if="!inputText.trim()" viewBox="0 0 1024 1024">
-                <path
-                    fill="currentColor"
-                    d="M512 64a448 448 0 1 1 0 896 448 448 0 0 1 0-896zm-38.4 409.6H409.6v307.2h64V473.6h64v-64h-64zM512 320a51.2 51.2 0 1 0 0-102.4 51.2 51.2 0 0 0 0 102.4z"
-                />
-              </svg>
-              <svg v-else viewBox="0 0 1024 1024">
-                <path
-                    fill="currentColor"
-                    d="M512 64a448 448 0 1 1 0 896 448 448 0 0 1 0-896zm-32 232.704h-64V512h64V296.704zm0 196.864v158.72h64v-158.72h-64z"
-                />
-              </svg>
-            </el-icon>
-          </el-button>
+              <!-- 否则按 markdown 渲染 -->
+              <div
+                  v-else
+                  class="message-text markdown-body"
+                  v-html="renderMarkdown(message.content)"
+              ></div>
+              <div class="message-time">{{ message.time }}</div>
+            </div>
+          </template>
         </div>
       </div>
     </div>
-  </div>
 
+    <!-- 输入区域 -->
+    <div class="chat-input-container">
+      <div class="input-wrapper">
+        <textarea
+            v-model="userInput"
+            @keydown.enter.prevent="sendMessage"
+            placeholder="输入您的问题..."
+            rows="1"
+            ref="inputArea"
+            @input="autoResize"
+            :disabled="isSending"
+        ></textarea>
+        <button
+            v-if="!isSending"
+            @click="sendMessage"
+            class="send-button"
+            :disabled="!userInput.trim()"
+        >
+          <i class="fas fa-paper-plane"></i>
+        </button>
+        <button
+            v-else
+            @click="stopMessage"
+            class="stop-button"
+        >
+          <i class="fas fa-stop"></i>
+        </button>
+      </div>
+      <div class="input-tips">
+        按 Enter 发送，Shift + Enter 换行
+      </div>
+    </div>
+  </div>
 </template>
 
-<script setup>
-import { ref, nextTick } from 'vue'
-import { ElMessage } from 'element-plus'
-import MarkdownIt from 'markdown-it'
-import { computed } from 'vue'
+<script>
+import { marked } from 'marked'
+import TestCaseCard from './TestCaseCard.vue'
 
-const displayedMessages = computed(() =>
-    messages.value.filter(msg => msg.role !== 'system')
-)
-const isThinking = ref(false)
-let thinkingMsgIndex = null
-
-/* ---------------------- Markdown 渲染器 ---------------------- */
-const md = new MarkdownIt({
-  html: true,
-  linkify: true,
-  typographer: true,
-  breaks: true
+marked.setOptions({
+  breaks: true,
+  gfm: true,
 })
-const renderMarkdown = text => md.render(text || '')
 
-/* ---------------------- 响应式状态 ---------------------- */
-const messages = ref([
-  {
-    role: 'system',
-    content:
-        '你是一位职场云小助手，回答要自然,热情，可适当加入表情。'
+export default {
+  name: 'Chat',
+  components: { TestCaseCard },
+  data() {
+    return {
+      messages: [
+        {
+          role: 'ai',
+          content:
+              '你好！我是您的AI助手，请问有什么可以帮您？\n\n我可以帮您：\n- 回答问题\n- 编写代码\n- 解释概念\n- 提供建议',
+          time: this.getCurrentTime(),
+          status_message: '', // 为初始 AI 消息添加 status_message
+        },
+      ],
+      userInput: '',
+      isSending: false,
+      abortController: null,
+    }
   },
-  {
-    role: 'assistant',
-    content: '你好！我是职场云☁小助手，有什么可以帮您的吗？😊'
-  }
-])
-
-const inputText = ref('')
-const dbSearch  = ref(false)
-const isLoading = ref(false)
-
-/* ---------------------- 发送按钮逻辑 ---------------------- */
-const sendMessage = async () => {
-  scrollToBottom()
-  const userQuestion = inputText.value.trim()
-  if (!userQuestion || isLoading.value) return
-
-  // 1) 推入用户消息
-  messages.value.push({ role: 'user', content: userQuestion })
-  inputText.value = ''
-
-  // 2) 预留 assistant 节点占位
-  const assistantIndex = messages.value.push({ role: 'assistant', content: '' }) - 1
-  isLoading.value = true
-  const processedQuestion = isThinking.value ? `/think ${userQuestion}` : `/nothink ${userQuestion}`
-  try {
-    /* —— txt2sql 分支 —— */
-    if (dbSearch.value) {
-      const sqlMd  = await generateSQL(userQuestion)   // SQL 片段 (Markdown)
-      messages.value[assistantIndex].content = sqlMd   // 先渲染 SQL 结果
-
-      const queryResult = await generateData(userQuestion)
-      const prompt = `这是数据库的查询结果:\\n${queryResult}。现在请你整理后给出用户问题的答案，请记住这个数据来源是根据数据库查询结果而不是用户提供！如果在返回数据库查询结果时涉及到dept_no，这是对照关系：dept_no(对应 dept_name:1监察，2财务，3后勤，4运维，5开发，6产品，7测试，8人力，9市场，10销售 等等部门)，如果涉及到金额记住单位是万.以上所有不要在对话中提到！！用户的问题：${processedQuestion}。`
-
-      // ►► 继续流式对话
-      await sendStreamRequest(buildMessagesArray(prompt), assistantIndex)
-    }
-    /* —— 普通聊天 / 非 txt2sql —— */
-    else {
-      await sendStreamRequest(buildMessagesArray(processedQuestion), assistantIndex)
-    }
-
-    scrollToBottom()
-  } catch (err) {
-    console.error(err)
-    ElMessage.error('发生错误，请稍后重试')
-  } finally {
-    isLoading.value = false
-  }
-}
-
-/* ---------------------- 构造消息数组 ---------------------- */
-const buildMessagesArray = (lastQuestion) => {
-  const history = messages.value.map(m => ({ role: m.role, content: m.content }))
-  history.pop()
-  history.push({ role: 'user', content: lastQuestion })
-  return history
-}
-
-/* ---------------------- 生成 SQL、查询数据 ---------------------- */
-const generateSQL = async (question) => {
-  try {
-    const response = await fetch('http://localhost:9090/qa/genSql', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: localStorage.getItem('jwt') || ''
-      },
-      body: JSON.stringify({ question, txt2sql: true })
-    });
-    if (!response.ok) {
-      throw new Error('无法获取SQL查询');
-    }
-    const json = await response.json();
-    if (json.code !== '200') {
-      throw new Error(json.msg || '生成SQL失败');
-    }
-    const sql = json.data;
-    console.log("sql为："+sql)
-    return `<div style="background:#f5f5f5;border-radius:8px;padding:10px;font-family:sans-serif;font-size:12px;color:#666;box-shadow:0 4px 8px rgba(0,0,0,0.1);transition:background 0.3s ease;margin:10px 0;"><div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:color 0.3s ease;" onclick="const pre=this.nextElementSibling;const arrow=this.querySelector('.arrow');const collapsed=pre.style.display==='none';pre.style.display=collapsed?'block':'none';arrow.style.transform=collapsed?'rotate(120deg)':'rotate(-120deg)';arrow.textContent=collapsed?'▼':'▶';"><span style='transition:color 0.3s ease;' onmouseover='this.style.color=\"#007BFF\"' onmouseout='this.style.color=\"#666\"'>已进行SQL语句的转换：</span><span class='arrow' style='margin-left:8px;transition:transform 0.3s ease;position:relative;top:1px;'>▶</span></div><pre style="background:#000;color:#fff;padding:8px;border-radius:6px;overflow-x:auto;margin-top:8px;font-family:monospace;white-space:pre-wrap;transition:max-height 0.5s ease-in-out;max-height:1000px;" v-show="!collapsed">${sql}</pre></div>`;
-  } catch (error) {
-    console.error('生成SQL失败:', error);
-    return '生成 SQL 时出错，请稍后重试。';
-  }
-};
-
-
-const generateData = async (question) => {
-  const res = await fetch('http://localhost:9090/qa/ask/sql', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: localStorage.getItem('jwt') || '' },
-    body: JSON.stringify({ question, txt2sql: true })
-  });
-
-  const json = await res.json();
-  console.log(json)
-  if (json.code !== '200') {
-    return '查询失败'; // 查询失败时返回错误信息
-  }
-
-  // 如果没有返回数据，返回"无返回结果"信息
-  if (!json.data) {
-    return '无返回结果';
-  }
-  console.log((json.data))
-  return json.data;
-};
-
-
-/* ---------------------- 发送流式请求 ---------------------- */
-const sendStreamRequest = async (messagesArray, assistantIndex) => {
-  const response = await fetch('http://localhost:9090/qa/askStream', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: localStorage.getItem('jwt') || '' },
-    body: JSON.stringify(messagesArray)       // ★ 直接发送数组！
-  })
-
-  if (!response.ok || !response.body) throw new Error('无法获取流响应')
-  let isThinking = false
-  const reader   = response.body.getReader()
-  const decoder  = new TextDecoder('utf-8')
-  let   buffer   = ''
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop()      // 保留未完整一行
-
-    for (let line of lines) {
-      line = line.trim()
-      if (!line || line === 'data: [DONE]') continue
-
-      // 去掉前缀
-      line = line.replace(/^data:\s*/, '').replace(/^data:\s*/, '')
+  methods: {
+    getCurrentTime() {
+      const now = new Date()
+      return `${now.getHours().toString().padStart(2, '0')}:${now
+          .getMinutes()
+          .toString()
+          .padStart(2, '0')}`
+    },
+    isTestCaseJson(text) {
       try {
-        const json  = JSON.parse(line)
-        let delta = json.choices?.[0]?.delta?.content
-        if (delta) {
-          // —— 检测 <think> 开始 ——
-          if (delta.includes('<think>')) {
-            isThinking = true
-            // 在 assistantIndex 之后插入一个新的 thinking 消息
-            thinkingMsgIndex = messages.value.length
-            messages.value.push({
-              role: 'thinking',
-              content: ''
-            })
-            // 去掉标签
-            delta = delta.replace('<think>', '')
-          }
-          if (delta.includes('</think>')) {
-            delta = delta.replace('</think>', '')
-            if (delta) {
-              await typeWriterEffect(delta, thinkingMsgIndex)
-            }
-            isThinking = false
-            thinkingMsgIndex = null
-            continue
-          }
-          if (isThinking) {
-            await typeWriterEffect(delta, thinkingMsgIndex)
+        const obj = JSON.parse(text)
+        if (Array.isArray(obj)) {
+          return obj.every(item =>
+              typeof item.case_id === 'string' &&
+              typeof item.title === 'string' &&
+              Array.isArray(item.steps) &&
+              typeof item.expected_result === 'string'
+          )
+        } else {
+          return (
+              typeof obj.case_id === 'string' &&
+              typeof obj.title === 'string' &&
+              Array.isArray(obj.steps) &&
+              typeof obj.expected_result === 'string'
+          )
+        }
+      } catch {
+        return false
+      }
+    },
+
+    parseTestCase(text) {
+      try {
+        return JSON.parse(text)
+      } catch {
+        return null
+      }
+    },
+    // 新增：模拟打字机效果的方法
+    async typewriterEffect(aiMessage, content) {
+      const delay = 10; // 每个字的延迟，可调整
+      let index = 0;
+      return new Promise((resolve) => {
+        const timer = setInterval(() => {
+          if (index < content.length) {
+            aiMessage.content += content[index];
+            this.$forceUpdate();
+            this.$nextTick(this.scrollToBottom);
+            index++;
           } else {
-            await typeWriterEffect(delta, assistantIndex)
+            clearInterval(timer);
+            resolve();
           }
+        }, delay);
+      });
+    },
+
+    async sendMessage() {
+      const content = this.userInput.trim()
+      if (!content || this.isSending) return
+
+      // 推送用户消息
+      this.messages.push({
+        role: 'user',
+        content,
+        time: this.getCurrentTime(),
+      })
+      this.userInput = ''
+      this.$nextTick(() => {
+        this.scrollToBottom()
+      })
+
+      let aiMessage = {
+        role: 'ai',
+        content: '',
+        time: this.getCurrentTime(),
+        status_message: '',
+      }
+      this.messages.push(aiMessage)
+
+      this.isSending = true
+      this.abortController = new AbortController()
+      const signal = this.abortController.signal
+      const token = localStorage.getItem("auth.token")
+
+      try {
+        const response = await fetch('http://localhost:9090/api/chat/normal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json',
+                     'Authorization': 'Bearer ' + token},
+          body: JSON.stringify({
+            messages: this.messages.map(msg => ({
+              role: msg.role,
+              content: msg.role === 'user' ? msg.content + '/no_think' : msg.content
+            })),
+          }),
+          signal,
+        })
+        if (!response.ok || !response.body) {
+          throw new Error(`网络错误：${response.status}`)
         }
 
-      } catch { /* 忽略解析失败的心跳包 */ }
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder('utf-8')
+        let buffer = ''
+
+        let streamDone = false
+        while (!streamDone) {
+          const { done, value } = await reader.read()
+          if (done) {
+            // 完整流结束
+            streamDone = true
+            break
+          }
+
+          buffer += decoder.decode(value, { stream: true })
+          // 按行分割。事件之间通常有一个空行分隔（SSE）
+          const lines = buffer.split(/\r?\n/)
+          // 最后一行可能是未完的片段，保存在 buffer 里
+          buffer = lines.pop()
+
+          for (const line of lines) {
+            const trimmed = line.trim()
+            if (!trimmed) {
+              // 空行 -> SSE 事件结束（但我们已经按行处理 data: 行了）
+              continue
+            }
+            if (!trimmed.startsWith('data:')) {
+              // 忽略不是 data: 开头的行（例如: event:, id: 等）
+              continue
+            }
+
+            // 移除所有前缀的 data:（有时服务端会多次写 data: data: {...}）
+            const jsonStr = trimmed.replace(/^(?:data:\s*)+/, '').trim()
+            if (!jsonStr) continue
+
+            if (jsonStr === '[DONE]') {
+              streamDone = true
+              break
+            }
+
+            try {
+              const data = JSON.parse(jsonStr)
+              // 优先处理 status_message
+              if (data.status_message !== undefined) {
+                aiMessage.status_message = data.status_message
+                this.$forceUpdate()
+              } else if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
+                // 内容片段
+                aiMessage.status_message = ''
+                aiMessage.content += data.choices[0].delta.content
+                this.$forceUpdate()
+                this.$nextTick(this.scrollToBottom)
+              }
+            } catch (e) {
+              console.error("Error parsing SSE data:", e, "raw:", jsonStr)
+              // 如果解析失败，忽略该片段继续处理后面的
+            }
+          }
+          // 继续外层循环，直到 reader.read() 的 done 为 true 或遇到 [DONE]
+        }
+
+        // 确保最终 status_message 清空（流正常结束）
+        if (aiMessage) aiMessage.status_message = ''
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          console.log('Fetch aborted by user.')
+          if (aiMessage) {
+            aiMessage.status_message = '用户中止'
+            this.$forceUpdate()
+          }
+        } else {
+          console.error('发送消息失败:', error)
+          if (aiMessage) {
+            aiMessage.status_message = `AI处理出错: ${error.message}`
+            this.$forceUpdate()
+          }
+        }
+      } finally {
+        this.isSending = false
+        this.abortController = null
+      }
+    },
+
+
+    // 新增：中断消息发送的方法
+    stopMessage() {
+      if (this.abortController) {
+        this.abortController.abort(); // 调用 abort 方法中断请求
+        console.log('消息发送已中断');
+      }
+    },
+
+    scrollToBottom() {
+      const container = this.$refs.messagesContainer
+      if (container) {
+        container.scrollTop = container.scrollHeight
+      }
+    },
+
+    autoResize() {
+      if (!this.isSending) { // 仅在非发送状态时调整大小
+        const textarea = this.$refs.inputArea;
+        textarea.style.height = 'auto';
+        textarea.style.height = `${textarea.scrollHeight}px`;
+      }
+    },
+
+    renderMarkdown(text) {
+      return marked(text)
+    },
+  },
+  watch: {
+    isSending(newValue) {
+      // 当 isSending 从 true 变为 false 时，重新调整输入框大小
+      if (!newValue) {
+        this.$nextTick(this.autoResize);
+      }
+    }
+  },
+  mounted() {
+    this.$nextTick(this.autoResize);
+    // 检查路由中是否有 initialMessage
+    if (this.$route.query.initialMessage) {
+      const initialMessageContent = this.$route.query.initialMessage;
+      // 将初始消息添加到消息列表
+      this.messages.push({
+        role: 'user',
+        content: initialMessageContent,
+        time: this.getCurrentTime(),
+      });
+      // 清除路由参数，避免重复添加
+      this.$router.replace({ query: null });
+      // 触发 AI 回复
+      this.userInput = initialMessageContent; // 临时设置 userInput 来触发 sendMessage 的逻辑
+      this.sendMessage();
+      this.userInput = ''; // 清除 userInput
     }
   }
-
-  /* 结束后把纯文本转换为 Markdown HTML */
-  const raw = messages.value[assistantIndex].content
-  messages.value[assistantIndex].content = renderMarkdown(raw)
-}
-
-/* ---------------------- 打字机效果 ---------------------- */
-const typeWriterEffect = (text, msgIndex) => {
-  return new Promise(resolve => {
-    let i = 0
-    const interval = setInterval(() => {
-      if (i >= text.length) {
-        clearInterval(interval)
-        resolve()
-        return
-      }
-      messages.value[msgIndex].content += text[i]
-      i++
-      nextTick(scrollToBottom)
-    }, 30)
-  })
-}
-
-
-
-
-/* ---------------------- 工具：滚动到底部 ---------------------- */
-const scrollToBottom = () => {
-  nextTick(() => {
-    const el = document.querySelector('.messages-area')
-    if (el) el.scrollTop = el.scrollHeight
-  })
 }
 </script>
 
-
-<style scoped>
-.chat-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 90vh;
-  background: linear-gradient(135deg, #f5f0ff 0%, #e3f6ff 100%) fixed;
-  padding: 1px;
-}
-
-
-.chat-container {
-  width: 100%;
-  max-width: 1300px;
-  height: 660px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 30px;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-  backdrop-filter: blur(5px);
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  display: flex;
-  flex-direction: column;
-}
-
-.input-bubble {
-  margin: 0 30px 30px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 25px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-  overflow: visible;
-}
-
-.bubble-form {
-  position: relative;
-  display: flex;
-  align-items: center;
-  padding-right: 60px;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 25px;
-  overflow: visible;
-}
-
-.bubble-form .db-search-switch {
-  position: absolute;
-  bottom: 10px;
-  display: flex;
-  align-items: center;
-  background: #eef4ff;
-  border: 1px solid #c1d4f7;
-  border-radius: 20px;
-  padding: 4px 8px;
-  z-index: 3;
-}
-
-.bubble-form .db-search-switch:first-of-type {
-  left: 10px;
-}
-.bubble-form .db-search-switch:nth-of-type(2) {
-  left: 19px;
-}
-
-
-/* 提升输入框和按钮层级 */
-.cute-input :deep(.el-textarea__inner) {
-  width: 100%;
-  min-height: 120px !important;
-  border: none !important;
-  background: transparent !important;
-  padding: 15px 25px;
-  color: #666;
-  resize: none;
-  line-height: 1.0 !important;
-  font-size: 14px; /* 可选，调字体大小 */
-  border-radius: 25px !important;
-  position: relative;
-  z-index: 1;
-}
-
-.send-button {
-  position: absolute;
-  right: 10px;
-  width: 40px;
-  height: 38px;
-  padding: 0;
-  border: none !important;
-  background: #e0e7ff !important;
-  border-radius: 50%;
-  transition: all 0.3s;
-  z-index: 2;
-}
-.send-button.active {
-  background: #b3c1e1 !important;
-}
-.send-button:hover {
-  background: #c1d4f7;
-}
-.send-icon {
-  color: #707f8b;
-  font-size: 18px;
-}
-
-/* 新增加载动画 */
-.loading-icon {
-  animation: rotate 1s linear infinite;
-}
-
-@keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.messages-area {
-  flex: 1;
-  padding: 30px;
-  overflow-y: auto;
-  background: linear-gradient(to bottom, #f8f9ff, #f0f7ff);
-}
-
-.message-bubble {
-  margin: 15px 0;
-  display: flex;
-  animation: bubbleAppear 0.3s ease-out;
-}
-
-@keyframes bubbleAppear {
-  from { transform: translateY(10px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-.bubble-content {
-  max-width: 75%;
-  padding: 15px 20px;
-  font-size: 16px;
+<style>
+.markdown-body {
+  font-size: 13px;
   line-height: 1.6;
-  border-radius: 18px;
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  display: inline-block;
-}
-
-.user .bubble-content {
-  background: linear-gradient(135deg, #6c8cff, #5b7cff);
-  margin-left: auto;
-  color: white;
-  border-radius: 20px 20px 5px 20px;
-}
-
-.assistant .bubble-content {
-  background: #ffffff;
-  color: #666;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-  border-radius: 20px 20px 20px 5px;
-}
-
-/* Markdown渲染样式 */
-
-
-.markdown-body h1,
-.markdown-body h2,
-.markdown-body h3 {
-  margin-top: 1em;
-  margin-bottom: 16px;
-  font-weight: 600;
-}
-
-.markdown-body ul,
-.markdown-body ol {
-  padding-left: 2em;
+  word-wrap: break-word;
+  text-align: left;
 }
 
 .markdown-body pre {
@@ -501,53 +373,245 @@ const scrollToBottom = () => {
 }
 
 .markdown-body code {
-  background-color: rgba(27,31,35,0.05);
-  border-radius: 3px;
+  background-color: rgba(175, 184, 193, 0.2);
+  border-radius: 4px;
   padding: 0.2em 0.4em;
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo,
+  Consolas, Liberation Mono, monospace;
 }
 
-
-/* Markdown样式 */
-:deep(.markdown-body) {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  line-height: 1.6;
+.markdown-body pre code {
+  background-color: transparent;
+  padding: 0;
 }
 
-:deep(.markdown-body h1) {
-  font-size: 2em;
-  border-bottom: 1px solid #eaecef;
-  padding-bottom: 0.3em;
-}
-
-:deep(.markdown-body pre) {
-  background-color: #f6f8fa;
-  border-radius: 3px;
-  padding: 16px;
-  overflow: auto;
-}
-
-:deep(.markdown-body p) {
+.markdown-body blockquote {
+  border-left: 0.25em solid #d0d7de;
+  padding: 0 1em;
+  color: #656d76;
   margin: 0;
 }
 
-/* 思考气泡 */
-.thinking-content {
-  background: rgba(240, 240, 240, 0.5);   /* 50% 透明度灰色 */
-  color: #888;                             /* 更淡的文字颜色 */
-  font-size: 13px;                         /* 略小字体 */
-  font-style: normal;                      /* 取消斜体 */
-  border-radius: 20px;                     /* 加大圆角 */
-  padding: 6px 10px;                       /* 适当内边距 */
-  margin: 8px 0;
-  max-width: 75%;
-  align-self: flex-start;
-  line-height: 1.4;
+.markdown-body ul {
+  padding-left: 2em;
 }
 
-
-.thinking .message-bubble {
-  justify-content: flex-start;
+.chat-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  overflow: hidden;
+  width: 100%;
 }
 
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  background: #ffffff;
+  padding: 0;
+  width: 100%;
+}
 
+/* ✅ 修改后的样式：更宽的聊天内容区域 */
+.messages-wrapper {
+  padding: 20px 5%;
+  max-width: 1200px;
+  margin: 0 auto;
+  min-height: 100%;
+}
+
+.message {
+  display: flex;
+  margin-bottom: 24px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-content {
+  flex: 1;
+}
+
+.user-content {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.ai-content {
+  margin-right: auto;
+  text-align: left;
+  width: 100%;
+}
+
+.message-text {
+  font-size: 15px;
+  line-height: 2;
+}
+
+.user-message .message-text {
+  background: #f0f0f0;
+  color: #1a1a1a;
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  display: inline-block;
+  max-width: 100%;
+}
+
+.ai-message .message-text {
+  color: #1a1a1a;
+  padding: 0;
+}
+
+.message-time {
+  font-size: 11px;
+  color: #999;
+  margin-top: 4px;
+}
+
+.chat-input-container {
+  padding: 16px 5%;
+  max-width: 1200px;
+  margin: 0 auto;
+  background: #ffffff;
+  border-top: 1px solid #e6e6e6;
+}
+
+.input-wrapper {
+  display: flex;
+  align-items: flex-end;
+  background: #ffffff;
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  width: 450px;
+  height: 56px;
+  max-height: 200px;
+  min-height: 56px;
+  font-family: inherit;
+  overflow-y: hidden;
+}
+
+.send-button, .stop-button {
+  background: #10a37f;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.send-button:hover:not(:disabled) {
+  background: #0d8c6d;
+}
+
+.send-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.stop-button {
+  background: #f56c6c;
+}
+
+.stop-button:hover:not(:disabled) {
+  background: #ea7a7a;
+}
+
+.stop-button:disabled {
+  background: #fab6b6;
+  cursor: not-allowed;
+}
+
+.input-tips {
+  font-size: 11px;
+  color: #999;
+  margin-top: 8px;
+  text-align: center;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* AI Status Message Styles */
+.ai-status-message {
+  position: relative;
+  display: inline-block;
+  padding: 8px 15px;
+  background-color: rgba(128, 128, 128, 0.1);
+  color: rgba(128, 128, 128, 0.7);
+  border-radius: 15px;
+  overflow: hidden; /* For shimmer effect */
+  font-size: 0.9em;
+  font-style: italic;
+  min-width: 100px;
+  text-align: center;
+}
+
+.ai-status-message .shimmer {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+      to right,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
 </style>

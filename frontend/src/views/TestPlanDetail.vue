@@ -70,12 +70,36 @@
                 </div>
               </div>
 
-              <!-- 执行步骤 -->
+              <!-- 执行步骤 (非编辑显示原文; 编辑时显示可增删的步骤列表) -->
               <div class="field">
                 <div class="field-label">执行步骤</div>
                 <div class="field-value mono" v-if="!editingCase">{{ selectedCase.steps || selectedCase.step || '-' }}</div>
                 <div v-else>
-                  <el-input type="textarea" v-model="editableCase.steps" rows="6" placeholder="执行步骤" />
+                  <div class="steps-list">
+                    <div
+                        v-for="(s, idx) in editableCase.stepsList"
+                        :key="idx"
+                        class="step-item"
+                        style="display:flex; gap:8px; align-items:flex-start; margin-bottom:8px;"
+                    >
+                      <el-input
+                          v-model="editableCase.stepsList[idx]"
+                          placeholder="步骤描述"
+                          style="flex:1"
+                      />
+                      <el-button
+                          type="text"
+                          title="删除此步骤"
+                          @click="removeStep(idx)"
+                          style="color:#e55353"
+                      >✕</el-button>
+                    </div>
+
+                    <div style="margin-top:8px;">
+                      <el-button type="primary" size="small" @click="addStep">添加步骤</el-button>
+                      <span class="small" style="margin-left:10px;color:#6b7280">每行代表一条步骤，保存时会合并为换行分隔的文本</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -232,7 +256,9 @@ const planId = Number(route.query.id || route.params.id);
 const plan = reactive({});
 const cases = ref([]);
 const selectedCase = ref(null);
-const editableCase = reactive({});
+const editableCase = reactive({
+  // stepsList: will be created on enterEdit
+});
 const editingCase = ref(false);
 const lastExecution = ref(null);
 
@@ -244,11 +270,33 @@ const users = ref([]);
 const loadPlan = async () => {
   try {
     const resp = await request.get(`/test-plans/${planId}`);
-    // your API returns { code: "200", msg:"", data: { ... } }
     const dataObj = resp?.data?.data ?? resp?.data ?? {};
     Object.assign(plan, dataObj);
+
+    // after we have plan, try load project name if projectId exists
+    const pid = plan.projectId ?? plan.project_id ?? null;
+    if (pid) {
+      await loadProject(pid);
+    }
   } catch (err) {
     console.error(err);
+  }
+};
+
+// ----- 1) 新增： loadProject(projectId) -----
+const loadProject = async (projectId) => {
+  if (!projectId) {
+    projectName.value = '';
+    return;
+  }
+  try {
+    const resp = await request.get(`/projects/${projectId}`);
+    const data = resp?.data?.data ?? resp?.data ?? {};
+    // try common keys
+    projectName.value = data.name ?? data.projectName ?? data.title ?? '';
+  } catch (err) {
+    console.warn('loadProject error', err);
+    projectName.value = '';
   }
 };
 
@@ -257,9 +305,7 @@ const loadPlanCases = async () => {
   try {
     const resp = await request.get(`/test-plans/${planId}/testcases`);
     const body = resp.data || {};
-    // controller returned List<Integer> in data or plain array
     const idArr = body.data ?? body;
-    // normalize to array of ids
     const ids = Array.isArray(idArr) ? idArr : (Array.isArray(body) ? body : []);
     const promises = ids.map(id =>
         request.get(`/testcases/${id}`).then(r => {
@@ -329,7 +375,7 @@ const loadLastExecution = async (caseId) => {
 const goBack = () => router.back();
 const refreshAll = async () => {
   await loadPlan();
-  await loadUsers();
+  await loadUsers();      // corrected route
   await loadPlanCases();
   if (selectedCase.value) await loadLastExecution(selectedCase.value.id);
 };
@@ -339,6 +385,15 @@ const enterEdit = () => {
   if (!selectedCase.value) return;
   // copy selectedCase -> editableCase (shallow copy)
   Object.assign(editableCase, JSON.parse(JSON.stringify(selectedCase.value)));
+  // prepare stepsList from existing steps text (split by newline)
+  const raw = editableCase.steps ?? editableCase.step ?? '';
+  let arr = [];
+  if (raw && typeof raw === 'string') {
+    arr = raw.split(/\r?\n/).map(s => s.trim()).filter(s => s.length > 0);
+  }
+  if (arr.length === 0) arr = ['']; // at least one empty input for usability
+  // set stepsList (reactive)
+  editableCase.stepsList = arr;
   editingCase.value = true;
 };
 
@@ -348,14 +403,33 @@ const cancelEdit = () => {
   editingCase.value = false;
 };
 
+// step list helpers
+const addStep = () => {
+  if (!Array.isArray(editableCase.stepsList)) editableCase.stepsList = [];
+  editableCase.stepsList.push('');
+  // scroll or focus could be added
+};
+
+const removeStep = (index) => {
+  if (!Array.isArray(editableCase.stepsList)) return;
+  editableCase.stepsList.splice(index, 1);
+  if (editableCase.stepsList.length === 0) editableCase.stepsList.push('');
+};
+
 const saveEdit = async () => {
   if (!editableCase.id) return;
   try {
+    // prepare steps: join stepsList by newline, trimming and keeping non-empty lines
+    const stepsList = Array.isArray(editableCase.stepsList)
+        ? editableCase.stepsList.map(s => (s || '').toString().trim()).filter(s => s.length > 0)
+        : [];
+    const stepsText = stepsList.join('\n');
+
     // prepare payload - map common fields
     const payload = {
       title: editableCase.title,
       preCondition: editableCase.preCondition ?? editableCase.pre_condition,
-      steps: editableCase.steps,
+      steps: stepsText,
       expectedResult: editableCase.expectedResult ?? editableCase.expected_result,
       priority: editableCase.priority,
       moduleId: editableCase.moduleId ?? editableCase.module_id
@@ -365,6 +439,8 @@ const saveEdit = async () => {
     ElMessage.success('保存成功');
     // merge back to selectedCase
     Object.assign(selectedCase.value, JSON.parse(JSON.stringify(editableCase)));
+    // ensure displayed steps reflect joined text
+    selectedCase.value.steps = stepsText;
     editingCase.value = false;
   } catch (err) {
     console.error(err);
@@ -391,9 +467,21 @@ const openSubmitResult = () => {
 
 const doSubmitResult = async () => {
   try {
+    // get current user id from localStorage 'auth.user'
+    let executedBy = null;
+    try {
+      const rawUser = localStorage.getItem('auth.user') || sessionStorage.getItem('auth.user');
+      const parsed = rawUser ? JSON.parse(rawUser) : null;
+      if (parsed && (parsed.id || parsed.userId || parsed.user_id)) {
+        executedBy = parsed.id ?? parsed.userId ?? parsed.user_id;
+      }
+    } catch (e) {
+      console.warn('read auth.user failed', e);
+    }
+
     const payload = {
       testCaseId: selectedCase.value.id,
-      executedBy: null,
+      executedBy: executedBy,
       executedAt: null,
       status: submitDialog.form.status,
       remarks: null,
@@ -550,6 +638,9 @@ onMounted(async () => {
 .field-value { flex:1; color:#111827; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace; white-space:pre-wrap; background: #fafafa; padding:8px; border-radius:6px; border:1px solid rgba(15,23,42,0.03); }
 
+/* step list item */
+.step-item el-input { width:100%; }
+
 /* 底部控制 */
 .detail-footer { display:flex; justify-content:space-between; align-items:center; margin-top:12px; }
 .detail-footer .left-note { color:#6b7280; font-size:13px; }
@@ -563,6 +654,56 @@ onMounted(async () => {
 .drawer-title { font-weight:600; font-size:16px; }
 .drawer-body { padding:18px 28px 80px; max-height:calc(100% - 160px); overflow:auto; }
 .drawer-footer { position:absolute; right:24px; bottom:18px; display:flex; gap:10px; z-index:30; }
+
+/* responsive */
+@media (max-width: 960px) {
+  .container { flex-direction:column; min-height: auto; }
+  .left-col, .right-col { width:100%; height: auto; max-height: none; }
+}
+</style>
+
+
+<style scoped>
+/* （原来的样式保持不变） */
+.page-root { padding: 16px; background: #f7fafc; min-height: 100vh; box-sizing: border-box; }
+.top-bar.small { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; color:#374151; }
+.crumbs .link { color:#1f6feb; cursor:pointer; margin-right:6px; }
+.container { display:flex; gap:12px; align-items:flex-start; min-height: calc(100vh - 160px); margin-bottom: 12px; }
+.left-col { width:320px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; padding:14px; box-sizing:border-box; height: calc(100vh - 220px); overflow:hidden; }
+.right-col { flex:1; min-width:0; padding:14px; box-sizing:border-box; height: calc(100vh - 220px); display:flex; flex-direction:column; }
+.card { background:#fff; border-radius:12px; box-shadow:0 8px 22px rgba(15,23,42,0.06); }
+.plan-header { margin-bottom:8px; }
+.plan-title { font-size:18px; font-weight:700; color:#111827; }
+.plan-meta { color:#6b7280; display:flex; gap:10px; margin-top:6px; font-size:13px; }
+.case-list { display:flex; flex-direction:column; gap:8px; margin-top:8px; overflow:auto; padding-right:6px; }
+.case-item { display:flex; justify-content:space-between; align-items:center; padding:10px; border-radius:10px; cursor:pointer; background:rgba(15,23,42,0.02); transition:all .12s ease; border:1px solid rgba(15,23,42,0.03); }
+.case-item:hover { transform: translateY(-2px); box-shadow:0 8px 20px rgba(15,23,42,0.04); }
+.case-item.active { background: linear-gradient(90deg, rgba(31,111,235,0.06), rgba(255,255,255,0)); border-color: rgba(31,111,235,0.12); }
+.case-left { display:flex; flex-direction:column; gap:4px; }
+.case-title { font-weight:600; color:#0f172a; }
+.case-meta.small { color:#6b7280; font-size:12px; }
+.detail-actions-top { display:flex; justify-content:flex-end; gap:8px; margin-bottom:8px; }
+.case-detail-scroll { overflow:auto; padding-right:6px; flex:1; }
+.case-detail { display:flex; flex-direction:column; gap:12px; }
+.detail-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.detail-title { font-size:18px; font-weight:700; color:#111827; }
+.detail-body { display:flex; flex-direction:column; gap:12px; }
+.field { display:flex; gap:12px; align-items:flex-start; }
+.field-label { width:140px; color:#6b7280; font-weight:600; }
+.field-value { flex:1; color:#111827; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace; white-space:pre-wrap; background: #fafafa; padding:8px; border-radius:6px; border:1px solid rgba(15,23,42,0.03); }
+.detail-footer { display:flex; justify-content:space-between; align-items:center; margin-top:12px; }
+.detail-footer .left-note { color:#6b7280; font-size:13px; }
+.right-controls { display:flex; gap:8px; }
+.empty-state { display:flex; align-items:center; justify-content:center; min-height:200px; color:#6b7280; font-size:14px; }
+.drawer-header { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid rgba(0,0,0,0.04); }
+.drawer-title { font-weight:600; font-size:16px; }
+.drawer-body { padding:18px 28px 80px; max-height:calc(100% - 160px); overflow:auto; }
+.drawer-footer { position:absolute; right:24px; bottom:18px; display:flex; gap:10px; z-index:30; }
+
+/* 新增的步骤行样式 */
+.step-row { display:flex; gap:8px; align-items:center; margin-bottom:6px; }
+.step-row .el-input { flex:1; }
 
 /* responsive */
 @media (max-width: 960px) {

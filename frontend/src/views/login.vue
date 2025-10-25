@@ -126,14 +126,15 @@ const extractResp = (resp) => {
   return {
     token: b?.token ?? (b?.data && b.data.token) ?? null,
     expiresAt: b?.expiresAt ?? (b?.data && b.data.expiresAt) ?? null,
-    permissions: b?.permissions ?? (b?.data && b.data.permissions) ?? []
+    permissions: b?.permissions ?? (b?.data && b.data.permissions) ?? [],
+    user: b.user
   };
 };
 
-const saveToken = ({ token, expiresAt }) => {
+const saveToken = ({ token, expiresAt, user }) => {
   if (!token) return;
   localStorage.setItem('auth.token', token);
-  localStorage.setItem('auth.token', token);
+  localStorage.setItem('auth.user', JSON.stringify(user));
   if (expiresAt) localStorage.setItem('auth.expiresAt', String(expiresAt));
   localStorage.removeItem('auth.shortExpire');
 
@@ -153,15 +154,14 @@ const submit = async () => {
   loading.value = true;
   try {
     const resp = await request.post('/auth/login', { username: form.username, password: form.password });
-    const { token, expiresAt, permissions } = extractResp(resp);
+    const { token, expiresAt, permissions, user } = extractResp(resp);
     if (!token) {
       const msg = (resp?.data && resp.data.message) || (resp?.message) || '登录失败，未返回 token';
       ElMessage.error(msg);
       loading.value = false;
       return;
     }
-    saveToken({ token, expiresAt });
-    console.log(permissions)
+    saveToken({ token, expiresAt, user });
     try { savePermissions(permissions || []); } catch (e) { console.warn('savePermissions failed', e); }
 
     ElMessage.success('登录成功');

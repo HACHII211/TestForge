@@ -33,7 +33,7 @@ public class AuthService {
     }
 
     /**
-     * 登录并返回 token + expiresAt + permissions
+     * 登录并返回 token + expiresAt + permissions + userDTO
      */
     public AuthResponse login(String username, String rawPassword) {
         if (username == null || rawPassword == null) {
@@ -63,6 +63,9 @@ public class AuthService {
         if (!passwordMatches) {
             throw new IllegalArgumentException("invalid credentials");
         }
+
+        // --- 把 user 映射为 UserDTO（不暴露 password） ---
+        UserDTO userDto = mapToDto(user);
 
         List<Long> roleIds = Collections.emptyList();
         try {
@@ -117,7 +120,32 @@ public class AuthService {
             permissionNames = Collections.emptyList();
         }
 
-        return new AuthResponse(token, expiresAt, permissionNames);
+        return new AuthResponse(token, expiresAt, permissionNames, userDto);
+    }
+
+    private UserDTO mapToDto(User user) {
+        if (user == null) return null;
+        UserDTO dto = new UserDTO();
+        // 假定 User 实体提供了这些 getter 名称（与 organizationMapper 的 resultMap 对应）
+        try {
+            dto.setId(user.getId());
+        } catch (Throwable ignored) {}
+        try { dto.setUsername(user.getUsername()); } catch (Throwable ignored) {}
+        try { dto.setEmail(user.getEmail()); } catch (Throwable ignored) {}
+        try { dto.setStatus(user.getStatus()); } catch (Throwable ignored) {}
+        try {
+            Object dep = user.getDepartmentId();
+            if (dep instanceof Number) dto.setDepartmentId(((Number) dep).longValue());
+        } catch (Throwable ignored) {}
+        try {
+            Object rid = user.getRoleId();
+            if (rid instanceof Number) dto.setRoleId(((Number) rid).longValue());
+        } catch (Throwable ignored) {}
+        try { dto.setDepartmentName(user.getDepartmentName()); } catch (Throwable ignored) {}
+        try { dto.setRoleName(user.getRoleName()); } catch (Throwable ignored) {}
+        try { dto.setCreatedAt(user.getCreatedAt()); } catch (Throwable ignored) {}
+        try { dto.setUpdatedAt(user.getUpdatedAt()); } catch (Throwable ignored) {}
+        return dto;
     }
 
     /** 生成 bcrypt hash（可用于注册/迁移） */
