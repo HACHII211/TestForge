@@ -1,17 +1,12 @@
 <template>
   <div style="display: flex; flex-direction: column; height: 100%;">
     <!-- 顶部栏 -->
-    <div style="height: 60px; background-color: white; text-align: left; color: #668fd5; font-size: 35px; display: flex; align-items: center">
+    <div style="height: 55px; background-color: white; text-align: left; color: #668fd5; font-size: 35px; display: flex; align-items: center">
       <div style="width: 200px; display: flex; align-items: center; font-size: 25px">
         <img style="width: 50px" src="@/assets/TestForge.png" alt="">
         Test Forge
       </div>
       <div style="margin-left: 70vw" />
-<!--      <div style="align-items: center; display: flex; width: fit-content">-->
-<!--        <img :src="data.UN.avatar" alt="" style="border-radius: 50%; width: 55px; height: 50px">-->
-<!--        <span style="font-size: 20px" v-if="data.UN.role === 'ADM'">{{ data.UN.name }}</span>-->
-<!--        <span style="font-size: 20px" v-if="data.UN.role === 'EMP'">{{ data.UN.firstName }}</span>-->
-<!--      </div>-->
     </div>
     <!-- 头部区域开始 -->
     <div style="border: 1px solid #ddd; display: flex; flex: 1;">
@@ -21,10 +16,6 @@
 <!--          <el-menu-item index="/testforge/home">-->
 <!--            <el-icon><HomeFilled /></el-icon>-->
 <!--            首页-->
-<!--          </el-menu-item>-->
-<!--          <el-menu-item index="/testforge/employee" v-if="data.UN.role === 'ADM'">-->
-<!--            <el-icon><Money /></el-icon>-->
-<!--            员工信息-->
 <!--          </el-menu-item>-->
           <el-menu-item index="/testforge/testPlan">
             <el-icon><SuitcaseLine /></el-icon>

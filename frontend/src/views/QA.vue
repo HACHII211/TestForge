@@ -358,6 +358,7 @@ export default {
 </script>
 
 <style>
+
 .markdown-body {
   font-size: 13px;
   line-height: 1.6;
@@ -394,15 +395,6 @@ export default {
 
 .markdown-body ul {
   padding-left: 2em;
-}
-
-.chat-container {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: #ffffff;
-  overflow: hidden;
-  width: 100%;
 }
 
 .chat-messages {
@@ -614,4 +606,31 @@ textarea {
     left: 100%;
   }
 }
+
+html, body, #app {
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 95vh;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.messages-wrapper {
+  padding: 20px 5%;
+  max-width: 1200px;
+  margin: 0 auto;
+  min-height: 0;
+}
+
+.chat-input-container {
+  z-index: 2;
+
+}
+
+
 </style>
