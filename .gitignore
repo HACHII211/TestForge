@@ -4,4 +4,7 @@
 /dist/
 /build/
 /.ionide/*
-backend/target
+/backend/target
+*.iml
+*.iws
+*.ipr
