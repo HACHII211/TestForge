@@ -1,7 +1,7 @@
 package com.example.service;
 
 import com.example.entity.TestPlan;
-import com.example.mapper.TestPlanMapper;
+import com.example.mapper.mysql.TestPlanMapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;

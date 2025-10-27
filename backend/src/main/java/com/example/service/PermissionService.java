@@ -2,7 +2,7 @@
 package com.example.service;
 
 import com.example.entity.Permission;
-import com.example.mapper.PermissionMapper;
+import com.example.mapper.mysql.PermissionMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 

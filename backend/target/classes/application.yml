@@ -3,10 +3,18 @@ server:
 
 spring:
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    username: root
-    password: '123456'
-    url: jdbc:mysql://localhost:3306/test_forge?useUnicode=true&characterEncoding=utf-8&allowMultiQueries=true&useSSL=false&serverTimezone=GMT%2b8
+    primary:
+      url: jdbc:mysql://localhost:3306/test_forge?useUnicode=true&characterEncoding=utf-8&allowMultiQueries=true&useSSL=false&serverTimezone=GMT%2b8
+      username: root
+      password: '123456'
+      driver-class-name: com.mysql.cj.jdbc.Driver
+
+    postgres:
+      url: jdbc:postgresql://localhost:5432/assistant_conversations
+      username: postgres
+      password: '123456'
+      driver-class-name: org.postgresql.Driver
+
   jackson:
     date-format: yyyy-MM-dd
   data:

@@ -3,8 +3,8 @@ package com.example.service;
 
 import com.example.entity.Project;
 import com.example.entity.User;
-import com.example.mapper.ProjectMapper;
-import com.example.mapper.ProjectUserMapper;
+import com.example.mapper.mysql.ProjectMapper;
+import com.example.mapper.mysql.ProjectUserMapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;

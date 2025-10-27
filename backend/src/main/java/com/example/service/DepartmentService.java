@@ -1,7 +1,7 @@
 package com.example.service;
 
 import com.example.entity.Department;
-import com.example.mapper.DepartmentMapper;
+import com.example.mapper.mysql.DepartmentMapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;

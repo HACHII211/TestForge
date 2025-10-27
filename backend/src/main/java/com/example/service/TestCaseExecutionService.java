@@ -1,7 +1,7 @@
 package com.example.service;
 
 import com.example.entity.TestCaseExecution;
-import com.example.mapper.TestCaseExecutionMapper;
+import com.example.mapper.mysql.TestCaseExecutionMapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;

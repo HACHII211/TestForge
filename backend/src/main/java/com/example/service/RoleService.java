@@ -1,8 +1,8 @@
 package com.example.service;
 
 import com.example.entity.Role;
-import com.example.mapper.RoleMapper;
-import com.example.mapper.RolePermissionMapper;
+import com.example.mapper.mysql.RoleMapper;
+import com.example.mapper.mysql.RolePermissionMapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;

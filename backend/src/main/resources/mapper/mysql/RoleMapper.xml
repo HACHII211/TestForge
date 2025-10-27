@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.mysql.RoleMapper">
+
+    <select id="selectAll" resultType="com.example.entity.Role">
+        SELECT *
+        FROM `role`
+        ORDER BY id
+    </select>
+
+    <select id="selectByName" parameterType="string" resultType="com.example.entity.Role">
+        SELECT *
+        FROM `role`
+        WHERE name LIKE CONCAT('%', #{name}, '%')
+        ORDER BY id
+    </select>
+
+    <select id="selectById" parameterType="int" resultType="com.example.entity.Role">
+        SELECT *
+        FROM `role`
+        WHERE id = #{id}
+    </select>
+
+    <insert id="addRole" parameterType="com.example.entity.Role" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `role` (name, description, created_at, updated_at)
+        VALUES (#{name}, #{description}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <update id="updateRole" parameterType="com.example.entity.Role">
+        UPDATE `role`
+        SET
+            name = #{name},
+            description = #{description},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteRole" parameterType="int">
+        DELETE FROM `role` WHERE id = #{id}
+    </delete>
+
+</mapper>

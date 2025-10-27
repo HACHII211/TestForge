@@ -2,8 +2,8 @@
 package com.example.security;
 
 import com.example.exception.AccessDeniedRuntimeException;
-import com.example.mapper.PermissionMapper;
-import com.example.mapper.RolePermissionMapper;
+import com.example.mapper.mysql.PermissionMapper;
+import com.example.mapper.mysql.RolePermissionMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.*;

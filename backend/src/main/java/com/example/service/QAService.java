@@ -1,6 +1,6 @@
 package com.example.service;
 
-import com.example.mapper.QAMapper;
+import com.example.mapper.mysql.QAMapper;
 import jakarta.annotation.Resource;
 import org.springframework.http.*;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;

@@ -1,7 +1,7 @@
 package com.example.service;
 
 import com.example.entity.DefectPriority;
-import com.example.mapper.DefectPriorityMapper;
+import com.example.mapper.mysql.DefectPriorityMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 

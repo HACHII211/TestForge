@@ -82,77 +82,23 @@ failsafe-reports/
 .env.test.local
 .env.production.local
 
-# Spring Boot local override files — you probably want to keep templates like application.yml.example
-# but ignore developer local overrides that may contain secrets
-/src/main/resources/application-*.yml
-/src/main/resources/application-*.properties
 
-# Keystores, credentials
 *.jks
 *.keystore
 *.p12
 *.pem
 *.key
 
-# =========================
-# MyBatis / generated SQL / DB
-# =========================
-# If you create local SQLite files or DB dumps, ignore them
 *.db
 *.sql
 dump.sql
 
-# =========================
-# Generated/IDE helper files & temporary
-# =========================
 *.tmp
 *.temp
 *.swp
 *~
 *.lock
 
-# =========================
-# Docker, container, and orchestration
-# =========================
-**/docker-compose.override.yml
-**/docker-compose.*.yml
-.env.docker
-/docker-compose.*.env
 
-# =========================
-# Security / signing / certs / keys / tokens
-# =========================
-# (Double check what you actually need — these should not be committed)
-secrets/
-credentials/
-tokens/
-
-# =========================
-# Optional: JetBrains specific caches / local runner files
-# =========================
-.idea/
-.idea_modules/
-/.idea/**/workspace.xml
-.idea/**/tasks.xml
-.idea/**/usage.statistics.xml
-.idea/**/shelf/
-
-# =========================
-# Mac / Linux hidden files
-# =========================
-*.kate-swp
-*~
-# =========================
-# Example: keep a template config in repo, but ignore real local config
-# =========================
-# Put your sample config in source control, e.g.:
-#   src/main/resources/application.yml.example
-# and make sure real local file is ignored:
-#   /src/main/resources/application.yml
 /src/main/resources/application.yml
 
-# =========================
-# Misc: IntelliJ run configs you don't want in repo
-# =========================
-# If your team wants to keep runConfigs, remove these lines.
-.idea/runConfigurations/

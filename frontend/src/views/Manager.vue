@@ -1,17 +1,20 @@
 <template>
   <div style="display: flex; flex-direction: column; height: 100%;">
     <!-- 顶部栏 -->
-    <div style="height: 55px; background-color: white; text-align: left; color: #668fd5; font-size: 35px; display: flex; align-items: center">
-      <div style="width: 200px; display: flex; align-items: center; font-size: 25px">
-        <img style="width: 50px" src="@/assets/TestForge.png" alt="">
-        Test Forge
-      </div>
-      <div style="margin-left: 70vw" />
-    </div>
+<!--    <div style="height: 55px; background-color: white; text-align: left; color: #668fd5; font-size: 35px; display: flex; align-items: center">-->
+<!--      <div style="width: 200px; display: flex; align-items: center; font-size: 25px">-->
+<!--        <img style="width: 50px" src="@/assets/TestForge.png" alt="">-->
+<!--        Test Forge-->
+<!--      </div>-->
+<!--      <div style="margin-left: 70vw" />-->
+<!--    </div>-->
     <!-- 头部区域开始 -->
     <div style="border: 1px solid #ddd; display: flex; flex: 1;">
       <!-- 左侧导航菜单 -->
       <div style="width: 200px; border-right: 1px solid #ddd; min-height: calc(100vh - 60px);">
+        <div style="width: 200px; display: flex; align-items: center; margin: 8px">
+          <img style="width: 45px" src="@/assets/TestForge.png" alt="">
+        </div>
         <el-menu router :default-active="router.currentRoute.value.path" style="border: 1px" class="el-menu">
 <!--          <el-menu-item index="/testforge/home">-->
 <!--            <el-icon><HomeFilled /></el-icon>-->

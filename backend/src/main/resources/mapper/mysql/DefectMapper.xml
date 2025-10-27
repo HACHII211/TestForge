@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.mysql.DefectMapper">
+
+    <resultMap id="DefectResultMap" type="com.example.entity.Defect">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="description" property="description"/>
+        <result column="status_id" property="statusId"/>
+        <result column="priority_id" property="priorityId"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="assigned_to" property="assignedTo"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="project_id" property="projectId"/>
+        <result column="module_id" property="moduleId"/>
+    </resultMap>
+
+    <select id="selectAll" resultMap="DefectResultMap">
+        SELECT id, title, description, status_id, priority_id, created_by, assigned_to, created_at, updated_at, project_id, module_id
+        FROM defect
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 按 Filters 模糊查询 -->
+    <select id="selectByFilters" resultMap="DefectResultMap" parameterType="com.example.entity.Defect">
+        SELECT id, title, description, status_id, priority_id, created_by, assigned_to, created_at, updated_at, project_id, module_id
+        FROM defect
+        <where>
+            <if test="title != null and title != ''">
+                and title like CONCAT('%', #{title}, '%')
+            </if>
+            <if test="projectId != null">
+                and project_id = #{projectId}
+            </if>
+            <if test="moduleId != null">
+                and module_id = #{moduleId}
+            </if>
+        </where>
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 根据 id 查询 -->
+    <select id="selectById" resultMap="DefectResultMap" parameterType="int">
+        SELECT id, title, description, status_id, priority_id, created_by, assigned_to, created_at, updated_at
+        FROM defect
+        WHERE id = #{id}
+    </select>
+
+    <!-- 插入，回填自增 id -->
+    <insert id="insertDefect" parameterType="com.example.entity.Defect" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO defect (title, description, status_id, priority_id, created_by, assigned_to, created_at, updated_at, project_id, module_id)
+        VALUES (#{title}, #{description}, #{statusId}, #{priorityId}, #{createdBy}, #{assignedTo}, NOW(), NOW(), #{projectId}, #{moduleId})
+    </insert>
+
+    <!-- 更新（整体更新） -->
+    <update id="updateDefect" parameterType="com.example.entity.Defect">
+        UPDATE defect
+        SET
+            title = #{title},
+            description = #{description},
+            status_id = #{statusId},
+            priority_id = #{priorityId},
+            created_by = #{createdBy},
+            assigned_to = #{assignedTo},
+            updated_at = NOW(),
+            project_id = #{projectId},
+            module_id = #{moduleId}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除 -->
+    <delete id="deleteDefect" parameterType="int">
+        DELETE FROM defect WHERE id = #{id}
+    </delete>
+
+</mapper>

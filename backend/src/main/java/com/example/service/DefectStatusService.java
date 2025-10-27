@@ -1,7 +1,7 @@
 package com.example.service;
 
 import com.example.entity.DefectStatus;
-import com.example.mapper.DefectStatusMapper;
+import com.example.mapper.mysql.DefectStatusMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 

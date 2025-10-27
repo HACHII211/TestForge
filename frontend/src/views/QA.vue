@@ -105,7 +105,7 @@ export default {
         {
           role: 'ai',
           content:
-              '你好！我是您的AI助手，请问有什么可以帮您？\n\n我可以帮您：\n- 回答问题\n- 编写代码\n- 解释概念\n- 提供建议',
+              '您好！我是TFBots!请问有什么可以帮您？\n\n我可以帮您：\n- 生成用例\n- 编写代码\n- 回答问题\n- 提供建议',
           time: this.getCurrentTime(),
           status_message: '', // 为初始 AI 消息添加 status_message
         },
@@ -615,7 +615,7 @@ html, body, #app {
 .chat-container {
   display: flex;
   flex-direction: column;
-  height: 95vh;
+  height: 100vh;
   overflow: hidden;
   background: #ffffff;
 }

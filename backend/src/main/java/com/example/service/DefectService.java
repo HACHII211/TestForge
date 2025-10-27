@@ -1,7 +1,7 @@
 package com.example.service;
 
 import com.example.entity.Defect;
-import com.example.mapper.DefectMapper;
+import com.example.mapper.mysql.DefectMapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;

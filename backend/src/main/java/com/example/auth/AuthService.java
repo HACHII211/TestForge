@@ -1,6 +1,10 @@
 package com.example.auth;
 
 import com.example.entity.User;
+import com.example.mapper.mysql.OrganizationMapper;
+import com.example.mapper.mysql.PermissionMapper;
+import com.example.mapper.mysql.RolePermissionMapper;
+import com.example.mapper.mysql.UserRoleMapper;
 import com.example.security.JwtUtil;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -13,16 +17,16 @@ import java.util.stream.Collectors;
 public class AuthService {
 
     @Resource
-    private com.example.mapper.OrganizationMapper organizationMapper;
+    private OrganizationMapper organizationMapper;
 
     @Resource
-    private com.example.mapper.UserRoleMapper userRoleMapper;
+    private UserRoleMapper userRoleMapper;
 
     @Resource
-    private com.example.mapper.RolePermissionMapper rolePermissionMapper;
+    private RolePermissionMapper rolePermissionMapper;
 
     @Resource
-    private com.example.mapper.PermissionMapper permissionMapper;
+    private PermissionMapper permissionMapper;
 
     private final JwtUtil jwtUtil;
     private final BCryptPasswordEncoder passwordEncoder;

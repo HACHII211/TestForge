@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.postgres.TestPostgresMapper">
+
+    <select id="selectAll" resultType="map">
+        SELECT
+            id,
+            conversation_uuid,
+            (messages -> (jsonb_array_length(messages) - 1)) ->> 'content' AS last_message_content,
+            (messages -> (jsonb_array_length(messages) - 1)) ->> 'role' AS last_message_role
+        FROM conversations
+        ;
+    </select>
+
+</mapper>
