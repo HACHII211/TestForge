@@ -32,19 +32,19 @@
 
     <insert id="insertConversationName" parameterType="com.example.entity.ConversationInfo" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
         INSERT INTO conversation_names (name, conversation_uuid, user_id, is_primary, visibility, description, tags, created_at, updated_at)
-        VALUES (#{name}, #{conversationUuid}, #{userId}, #{isPrimary}, #{visibility}, #{description}, #{tags}::jsonb, now(), now())
+        VALUES (#{name}, #{conversationUuid}::uuid, #{userId}, #{isPrimary}, #{visibility}, #{description}, #{tags}::jsonb, now(), now())
     </insert>
 
     <update id="updateConversationName" parameterType="com.example.entity.ConversationInfo">
         UPDATE conversation_names
         SET name = #{name},
-            conversation_uuid = #{conversationUuid},
+            conversation_uuid = #{conversationUuid}::uuid,
             user_id = #{userId},
             is_primary = #{isPrimary},
             visibility = #{visibility},
             description = #{description},
             tags = #{tags}::jsonb,
-        updated_at = now()
+            updated_at = now()
         WHERE id = #{id}
     </update>
 

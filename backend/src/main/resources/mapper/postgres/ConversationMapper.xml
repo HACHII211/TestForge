@@ -51,12 +51,12 @@
         SELECT id, conversation_uuid, user_id, assistant_id, messages::text as messages, metadata::text as metadata,
                 last_activity, created_at, updated_at
         FROM conversations
-        WHERE conversation_uuid = #{conversationUuid}
+        WHERE conversation_uuid = #{conversationUuid}::uuid
     </select>
 
     <insert id="insertConversation" parameterType="com.example.entity.Conversation" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
         INSERT INTO conversations (conversation_uuid, user_id, assistant_id, messages, metadata, last_activity, created_at, updated_at)
-        VALUES (#{conversationUuid}, #{userId}, #{assistantId}, #{messages}::jsonb, #{metadata}::jsonb, #{lastActivity}, now(), now())
+        VALUES (#{conversationUuid}::uuid, #{userId}, #{assistantId}, #{messages}::jsonb, #{metadata}::jsonb, #{lastActivity}, now(), now())
     </insert>
 
     <update id="updateConversation" parameterType="com.example.entity.Conversation">
@@ -65,7 +65,7 @@
             user_id = #{userId},
             assistant_id = #{assistantId},
             messages = #{messages}::jsonb,
-      metadata = #{metadata}::jsonb,
+            metadata = #{metadata}::jsonb,
             last_activity = #{lastActivity},
             updated_at = now()
         WHERE id = #{id}
@@ -96,7 +96,7 @@
                             now()
                         )
                 )
-        WHERE conversation_uuid = #{conversationUuid}
+        WHERE conversation_uuid = #{conversationUuid}::uuid
     </update>
 
 </mapper>
