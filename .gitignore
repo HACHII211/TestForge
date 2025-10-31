@@ -1,10 +1,28 @@
-.idea
-./node_modules
-./frontend/node_modules
+# IDEs
+/.idea/
+/.vscode/
+/.ionide/
+
+# Node deps (ignore any node_modules folders)
+/node_modules/
+**/node_modules/
+
+# Frontend/build outputs
 /dist/
 /build/
-/.ionide/*
-/backend/target
+
+# Backend build
+/backend/target/
+
+# Project / IDE files
 *.iml
 *.iws
 *.ipr
+
+# OS & logs & env
+.DS_Store
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+.env
+.env.local
