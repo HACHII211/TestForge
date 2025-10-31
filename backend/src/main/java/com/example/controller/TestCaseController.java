@@ -8,6 +8,8 @@ import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/testcases")
 public class TestCaseController {
@@ -43,6 +45,15 @@ public class TestCaseController {
     public Result addTestCase(@RequestBody TestCase testCase) {
         testCaseService.addTestCase(testCase);
         return Result.success();
+    }
+
+    @PostMapping("/batch")
+    public com.example.common.Result insertBatch(@RequestBody List<TestCase> list) {
+        if (list == null || list.isEmpty()) {
+            return com.example.common.Result.error("400","empty payload");
+        }
+        testCaseService.insertBatch(list);
+        return com.example.common.Result.success(list);
     }
 
     @RequiresPermission("TESTCASE_MANAGE")

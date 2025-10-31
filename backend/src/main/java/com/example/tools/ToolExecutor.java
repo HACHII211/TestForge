@@ -1,54 +1,74 @@
 package com.example.tools;
 
 import com.example.model.ChatRequest;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.schema.SchemaHolder;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 import java.util.Map;
 
+@Component
 public class ToolExecutor {
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    public static void execute(String toolName, String arguments, ChatRequest request, SseEmitter emitter) {
-        System.out.println("[ToolExecutor] 开始执行: " + toolName + ", args: " + arguments + ", request: " + request);
+    private final JdbcTemplate jdbcTemplate;
+    private final SchemaHolder schemaHolder;
+    private final RestTemplate restTemplate;   // 可保留用于 ToolExecutor 自身需要
+    private final ToolFunctions toolFunctions; // 注入的组件（实例方法）
+
+    public ToolExecutor(JdbcTemplate jdbcTemplate,
+                        SchemaHolder schemaHolder,
+                        RestTemplate restTemplate,
+                        ToolFunctions toolFunctions) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.schemaHolder = schemaHolder;
+        this.restTemplate = restTemplate;
+        this.toolFunctions = toolFunctions;
+    }
+
+    /**
+     * 根据 toolName 路由到不同工具，execute_sql 分支会调用 toolFunctions.executeSqlAndFollowUp(...)
+     */
+    public void execute(String toolName, String arguments, ChatRequest request, SseEmitter emitter) {
+        System.out.println("[ToolExecutor] 开始执行: " + toolName + ", args: " + arguments);
         try {
-            sendLiveStatus(emitter, "thinking..."); // Send thinking status before tool execution
+            sendLiveStatus(emitter, "thinking...");
 
             String result = "";
 
             switch (toolName) {
-                case "get_weather": {
-                    String city = mapper.readTree(arguments).get("city").asText();
-                    System.out.println("[ToolExecutor] 参数 city: " + city);
-                    result = SimpleToolFunctions.getWeather(city);
-                    break;
-                }
-                case "get_stock_price": {
-                    String ticker = mapper.readTree(arguments).get("ticker").asText();
-                    System.out.println("[ToolExecutor] 参数 ticker: " + ticker);
-                    result = SimpleToolFunctions.getStockPrice(ticker);
-                    break;
-                }
                 case "generate_test_cases": {
-                    // 批量用例
-                    JsonNode argNode2 = mapper.readTree(arguments).get("test_cases");
-                    String inputArrayJson = mapper.writeValueAsString(argNode2);
-                    System.out.println("[ToolExecutor] 批量生成测试用例，原始 JSON 数组: " + inputArrayJson);
-                    result = SimpleToolFunctions.generateTestCases(inputArrayJson);
-                    System.out.println("[ToolExecutor] generateTestCases -> " + result);
+                    JsonNode argNode = mapper.readTree(arguments).get("test_cases");
+                    String inputArrayJson = mapper.writeValueAsString(argNode);
+                    result = toolFunctions.generateTestCases(inputArrayJson);
                     break;
+                }
+                case "txt2sql": {
+                    // 如果你仍会在 tools.json 中触发 txt2sql，IntentDetector 理想情况下已经把 SQL 生成好并返回 execute_sql
+                    // 这里保留占位（不直接处理）
+                    break;
+                }
+                case "execute_sql": {
+                   JsonNode argNode = mapper.readTree(arguments);
+                    String sql = argNode.path("sql").asText("");
+                    JsonNode paramsNode = argNode.path("params");
+                    List<Object> params = mapper.convertValue(paramsNode, List.class);
+
+                    toolFunctions.executeSqlAndFollowUp(sql, params, request, jdbcTemplate, schemaHolder, emitter);
+                    return;
                 }
                 default:
                     throw new UnsupportedOperationException("未知工具: " + toolName);
             }
 
-            // Clear status after tool execution and before sending final result
+            // 非 SQL 工具走这里返回结果
             sendLiveStatus(emitter, "");
-
-            // 拼接 SSE 响应
             String assistantMsg = mapper.writeValueAsString(Map.of(
                     "choices", List.of(
                             Map.of("delta", Map.of("content", result))
@@ -60,7 +80,8 @@ public class ToolExecutor {
 
         } catch (Exception e) {
             System.err.println("[ToolExecutor] 执行异常: " + e.getMessage());
-            sendLiveStatus(emitter, ""); // Clear status on error
+            e.printStackTrace();
+            sendLiveStatus(emitter, "");
             try {
                 emitter.completeWithError(e);
             } catch (Exception ignore) {}
@@ -70,7 +91,6 @@ public class ToolExecutor {
     // Helper method to send live status updates
     private static void sendLiveStatus(SseEmitter emitter, String statusMessage) {
         try {
-            // Create a JSON object for the status message
             String jsonStatus = mapper.writeValueAsString(Map.of("status_message", statusMessage));
             emitter.send(jsonStatus + "\n", MediaType.TEXT_EVENT_STREAM);
         } catch (Exception e) {

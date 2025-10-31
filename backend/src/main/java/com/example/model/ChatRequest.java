@@ -13,7 +13,7 @@ public class ChatRequest {
     private List<Map<String, String>> messages;
     private boolean stream = true;
     private List<Map<String, Object>> tools;
-    private String tool_choice = "auto";
+    private String tool_choice = "";
     @Data
     @AllArgsConstructor
     @NoArgsConstructor

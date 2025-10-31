@@ -4,7 +4,6 @@
       <!-- 顶部跨栏卡片 -->
       <div class="card top-card" ref="topCard">
         <div class="top-left">
-          <label class="small-label">项目 </label>
           <el-select
               v-model="state.selectedProjectId"
               placeholder="全部项目"

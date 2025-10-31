@@ -19,10 +19,6 @@ public class ConversationController {
 
     private final ObjectMapper MAPPER = new ObjectMapper();
 
-    /**
-     * 分页/条件查询
-     * GET /conversations?pageNum=1&pageSize=10&userId=...&assistantId=...&q=...
-     */
     @GetMapping
     public Result list(
             @RequestParam(required = false) Long userId,
@@ -58,20 +54,20 @@ public class ConversationController {
 
     @PostMapping
     public Result add(@RequestBody Conversation conv) {
-        // messages/metadata could be null; ensure valid JSON text
-        if (conv.getMessages() == null || conv.getMessages().isEmpty()) conv.setMessages("[]");
-        if (conv.getMetadata() == null || conv.getMetadata().isEmpty()) conv.setMetadata("{}");
+        System.out.println(conv.getUserId()+" "+conv.getAssistantId());
+
         conversationService.addConversation(conv);
+
         return Result.success(conv);
     }
 
     @PutMapping("/{id}")
     public Result update(@PathVariable Long id, @RequestBody Conversation conv) {
         conv.setId(id);
-        // update updatedAt inside service
         conversationService.updateConversation(conv);
         return Result.success();
     }
+
 
     @DeleteMapping("/{id}")
     public Result delete(@PathVariable Long id) {

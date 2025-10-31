@@ -2,36 +2,8 @@
   {
     "type": "function",
     "function": {
-      "name": "get_weather",
-      "description": "获取某城市天气",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "city": { "type": "string", "description": "城市名" }
-        },
-        "required": ["city"]
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "get_stock_price",
-      "description": "获取股票价格",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "ticker": { "type": "string", "description": "股票代码" }
-        },
-        "required": ["ticker"]
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
       "name": "generate_test_cases",
-      "description": "用于生成单个或多个测试用例，包括用例标识、前置条件、测试步骤、预期结果和实际结果等，如用于生成两个、三个或更多测试用例",
+      "description": "用于生成单个或多个测试用例，生成的测试用例包括用例标识、前置条件、测试步骤、预期结果和实际结果等，如用于生成单个、三个或更多测试用例",
       "parameters": {
         "type": "object",
         "properties": {
@@ -79,6 +51,42 @@
           }
         },
         "required": ["test_cases"]
+      }
+    }
+  },
+
+  {
+    "type": "function",
+    "function": {
+      "name": "txt2sql",
+      "description": "将用户的自然语言查询或需求转换为 SQL。注意：请尽量生成参数化 SQL（使用问号 '?' 占位符）并只使用模型被允许的表与列。返回格式应为 JSON 对象 {\"sql\":\"...\",\"params\":[...] } 或仅返回 SQL 字符串。不要执行任何数据库操作，仅负责生成 SQL。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "用户的自然语言查询或需求" },
+          "hints": { "type": "string", "description": "可选的额外上下文或限制（如最大返回行数、排序要求等）" }
+        },
+        "required": ["query"]
+      }
+    }
+  },
+
+  {
+    "type": "function",
+    "function": {
+      "name": "execute_sql",
+      "description": "执行已经生成并经过服务端校验的 SQL（仅限 SELECT 查询）。参数包含 SQL 字符串与参数数组。执行前服务端会进行白名单校验并且只允许只读操作。返回值应为一个 JSON 用于表示执行结果。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "sql": { "type": "string", "description": "要执行的 SQL，建议为参数化 SQL，使用 '?' 占位" },
+          "params": {
+            "type": "array",
+            "items": { "type": ["string", "number", "boolean", "null"] },
+            "description": "与 SQL 中占位符对应的参数数组"
+          }
+        },
+        "required": ["sql"]
       }
     }
   }

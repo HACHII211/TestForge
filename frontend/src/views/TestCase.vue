@@ -1,247 +1,479 @@
 <template>
-  <div>
-    <!-- 顶部导航条（无外层 margin）-->
-    <div class="top-links-bar">
-      <div class="top-links-inner">
-        <a class="top-link active" href="/testforge/testcases">用例库</a>
-      </div>
-    </div>
+  <div class="page-root">
+<!--    <div class="top-links-bar">-->
+<!--      <div class="top-links-inner">-->
+<!--        <a class="top-link active" href="/testforge/testcases">用例库</a>-->
+<!--      </div>-->
+<!--    </div>-->
 
-    <!-- 主卡片：搜索区 + 操作按钮 + 表格 + 分页 -->
-    <div class="card merged-card">
-      <!-- 查询与筛选行 -->
-      <div class="toolbar">
-        <el-input
-            v-model="data.title"
-            placeholder="请输入用例名称搜索"
-            style="width: 320px"
-            @keydown.enter="onSearch"
-        ></el-input>
+    <div class="page-container">
+      <div class="card top-card" ref="topCard">
+        <div class="top-left">
+          <el-select
+              v-model="state.selectedProjectId"
+              placeholder="全部项目"
+              clearable
+              filterable
+              @change="onProjectChange"
+              :style="{ minWidth: '220px', width: 'min(40vw, 320px)' }"
+          >
+            <el-option :label="'全部项目'" :value="null" />
+            <el-option
+                v-for="p in state.projects"
+                :key="p.id ?? p._val"
+                :label="p.name"
+                :value="p.id ?? p._val"
+            />
+          </el-select>
+        </div>
 
-        <el-select v-model="data.filterProjectVal" placeholder="按项目筛选" clearable style="width: 240px; margin-left: 10px">
-          <el-option v-for="p in data.projects" :key="p._val" :label="p.name" :value="p._val" />
-        </el-select>
-
-        <el-select v-model="data.filterModuleVal" placeholder="按模块筛选" clearable style="width: 220px; margin-left: 10px">
-          <el-option v-for="m in data.modules" :key="m._val" :label="m.name" :value="m._val" />
-        </el-select>
-
-        <el-button type="primary" style="margin-left: 10px" @click="onSearch">查 询</el-button>
-        <el-button type="success" style="margin-left: 10px" @click="restart">重 置</el-button>
-
-        <div class="toolbar-right">
-          <el-button type="danger" @click="delBatch" v-if="hasPermission('testcase_manage')">批量删除</el-button>
-          <el-button type="primary" @click="handleAdd" style="margin-left: 10px" v-if="hasPermission('testcase_manage')">添加用例</el-button>
+        <div class="top-right">
+          <el-input
+              v-model="state.q"
+              placeholder="按用例名称搜索（回车查询）"
+              @keydown.enter.native="onSearch"
+              clearable
+              :style="{ width: 'min(40vw, 420px)' }"
+          />
+          <el-button type="primary" @click="onSearch">搜索</el-button>
+          <el-button @click="resetFilters">重置</el-button>
         </div>
       </div>
 
-      <!-- 表格：只显示指定列 -->
-      <el-table :data="data.case_list" @selection-change="handleSelectionChange" style="margin-top: 12px">
-        <el-table-column type="selection" width="55" v-if="hasPermission('testcase_manage')"></el-table-column>
+      <div class="main-row">
+        <div class="card left-card">
+          <div class="left-card-header">模块</div>
+          <div class="module-list" ref="moduleList">
+            <div
+                class="module-chip"
+                :class="{ active: state.selectedModuleId === null }"
+                @click="selectModule(null)"
+                title="全部模块"
+            >
+              全部模块
+            </div>
+            <div
+                v-for="m in state.modules"
+                :key="m.id ?? m._val"
+                class="module-chip"
+                :class="{ active: isModuleSelected(m) }"
+                @click="selectModule(m)"
+                :title="getModuleDisplayName(m)"
+            >
+              {{ getModuleDisplayName(m) }}
+            </div>
+          </div>
+        </div>
 
-        <el-table-column label="用例ID" prop="id" width="90"></el-table-column>
+        <div class="card right-card">
+          <div class="right-toolbar">
+            <div class="left-actions">
+              <el-button type="danger" @click="deleteSelected" :disabled="!selectedRows.length" v-if="hasPermission('testcase_manage')">批量删除</el-button>
+              <el-button type="primary" @click="openAddDrawer" style="margin-left: 8px" v-if="hasPermission('testcase_manage')">新增用例</el-button>
+            </div>
+            <div class="right-actions">
+              <div class="total-text">共 {{ state.total }} 条</div>
+            </div>
+          </div>
 
-        <el-table-column label="优先级" width="120">
-          <template #default="scope">
-            {{ scope.row.priority || scope.row.priorityName || '-' }}
-          </template>
-        </el-table-column>
+          <div class="table-viewport">
+            <el-table
+                :data="tableData"
+                @selection-change="onSelectionChange"
+                stripe
+                size="medium"
+                :row-key="row => row.id"
+                style="width: 100%; min-width: 800px"
+            >
+              <el-table-column type="selection" width="55" v-if="hasPermission('testcase_manage')"/>
+              <el-table-column prop="id" label="用例ID" width="90" />
+              <el-table-column label="优先级" width="120">
+                <template #default="scope">
+                  <el-tag :type="priorityTagType(resolvePriorityName(scope.row))">
+                    {{ resolvePriorityName(scope.row) || '-' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="用例状态" width="140">
+                <template #default="scope">
+                  <el-tag :style="statusTagStyle(resolveStatusName(scope.row))">
+                    {{ resolveStatusName(scope.row) || scope.row.status || '-' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="用例名称" min-width="260">
+                <template #default="scope">
+                  {{ scope.row.title || scope.row.name || '-' }}
+                </template>
+              </el-table-column>
+              <el-table-column label="所属项目" prop="projectName" width="160">
+                <template #default="scope">
+                  {{ getProjectName(scope.row) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="所属模块" prop="moduleName" width="160">
+                <template #default="scope">
+                  {{ getModuleName(scope.row) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="创建人" prop="createdByName" width="140">
+                <template #default="scope">
+                  {{ getUserName(scope.row, 'created') }}
+                </template>
+              </el-table-column>
+              <el-table-column label="执行人" prop="executedByName" width="120">
+                <template #default="scope">
+                  {{ getUserName(scope.row, 'executed') }}
+                </template>
+              </el-table-column>
+              <el-table-column label="创建时间" prop="createdAt" width="160">
+                <template #default="scope">
+                  {{ formatDate(scope.row.createdAt || scope.row.created_at) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="160" fixed="right" v-if="hasPermission('testcase_manage')">
+                <template #default="scope">
+                  <span class="action-link" @click="openEditDrawer(scope.row)">编辑</span>
+                  <span class="action-link danger" @click="confirmDelete(scope.row)">删除</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
 
-        <el-table-column label="用例状态" width="140">
-          <template #default="scope">
-            <el-tag v-if="scope.row.status === '新建'" :style="{ backgroundColor: '#E0F7FA', color: '#0097A7' }">新建</el-tag>
-            <el-tag v-else-if="scope.row.status === '就绪'" :style="{ backgroundColor: '#E8F5E9', color: '#43A047' }">就绪</el-tag>
-            <el-tag v-else-if="scope.row.status === '处理中'" :style="{ backgroundColor: '#FFF3E0', color: '#FB8C00' }">处理中</el-tag>
-            <el-tag v-else-if="scope.row.status === '处理完成'" :style="{ backgroundColor: '#E8F5E9', color: '#2E7D32' }">处理完成</el-tag>
-            <el-tag v-else-if="scope.row.status === '复测中'" :style="{ backgroundColor: '#E3F2FD', color: '#1E88E5' }">复测中</el-tag>
-            <el-tag v-else-if="scope.row.status === '拒绝'" :style="{ backgroundColor: '#FFEBEE', color: '#E53935' }">拒绝</el-tag>
-            <el-tag v-else-if="scope.row.status === '关闭'" :style="{ backgroundColor: '#ECEFF1', color: '#607D8B' }">关闭</el-tag>
-            <span v-else>{{ scope.row.status ?? '-' }}</span>
-          </template>
-        </el-table-column>
-
-
-        <el-table-column label="用例名称" >
-          <template #default="scope">
-            {{ scope.row.title || scope.row.name || '-' }}
-          </template>
-        </el-table-column>
-
-        <el-table-column label="所属项目" width="160">
-          <template #default="scope">
-            {{ getProjectName(scope.row) }}
-          </template>
-        </el-table-column>
-
-        <el-table-column label="所属模块" width="160">
-          <template #default="scope">
-            {{ getModuleName(scope.row) }}
-          </template>
-        </el-table-column>
-
-        <el-table-column label="创建人" width="140">
-          <template #default="scope">
-            {{ getUserName(scope.row, 'created') }}
-          </template>
-        </el-table-column>
-
-        <el-table-column label="执行人" width="120">
-          <template #default="scope">
-            {{ getUserName(scope.row, 'executed') }}
-          </template>
-        </el-table-column>
-
-        <el-table-column label="操作" width="180" v-if="hasPermission('testcase_manage')">
-          <template #default="scope">
-            <span class="action-link" @click="handleUpdate(scope.row)"> 编辑</span>
-            <span class="action-link danger" @click="handleDel(scope.row.id)"> 删除</span>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <!-- 分页 -->
-      <div style="margin-top: 12px;">
-        <el-pagination
-            @size-change="handleSizeChange"
-            @current-change="handleCurrentChange"
-            :current-page="data.pageNum"
-            :page-size="data.pageSize"
-            :page-sizes="[10, 15, 20]"
-            layout="total, sizes, prev, pager, next, jumper"
-            :total="data.total"
-        />
+          <div class="bottom-pagination">
+            <el-pagination
+                :current-page="state.pageNum"
+                :page-size="state.pageSize"
+                :total="state.total"
+                layout="total, prev, next"
+                @current-change="handlePageChange"
+                background
+            />
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- 删除确认 -->
-    <el-dialog title="警告" v-model="data.formVisible3" style="text-align: center" width="460">
-      <div style="text-align: center;margin: 40px;font-size: 18px">
-        您确定要删除编号为 {{ data.deleteId }} 的用例吗？
+    <el-dialog title="确认删除" v-model="confirmDialog.visible" width="460">
+      <div style="text-align:center; font-size:16px; margin: 24px 0;">
+        确认删除用例：<strong>{{ confirmDialog.row?.id }} - {{ confirmDialog.row?.title }}</strong> ?
       </div>
-      <div style="margin-top: auto; display: flex; justify-content: flex-end; gap: 10px;">
-        <el-button type="info" @click="data.formVisible3=false">取消</el-button>
-        <el-button type="info" @click="deleteData">确认删除</el-button>
-      </div>
+      <span slot="footer" class="dialog-footer">
+    <el-button @click="confirmDialog.visible = false">取消</el-button>
+    <el-button type="danger" @click="doDelete">确认删除</el-button>
+  </span>
     </el-dialog>
 
-    <!-- 新增/编辑抽屉（替换原来的 dialog）-->
     <el-drawer
-        v-model="data.updateFormVisible"
-        title=""
-        direction="rtl"
-        :size="'50vw'"
+        v-model="drawer.visible"
         :with-header="false"
+        direction="rtl"
+        :size="'46vw'"
+        append-to-body
         class="drawer-custom"
         :destroy-on-close="true"
-        append-to-body
-        :lock-scroll="false"
-        :style="{ transition: 'transform 1020ms cubic-bezier(0.25, 0.8, 0.25, 1)' }"
     >
-      <!-- 自定义头部（看起来更扁平） -->
       <div class="drawer-header">
-        <div class="drawer-title">{{ data.form.id ? '编辑用例' : '新增用例' }}</div>
+        <div class="drawer-title">{{ drawer.isEdit ? '编辑用例' : '新增用例' }}</div>
         <div class="drawer-actions">
-          <el-button type="text" @click="data.updateFormVisible = false">关闭</el-button>
+          <el-button type="text" @click="drawer.visible = false">关闭</el-button>
         </div>
       </div>
 
       <div class="drawer-body">
-        <div class="form-wrapper">
-          <el-form :model="data.form" ref="formRef" label-width="120px">
-            <el-form-item label="用例名称" prop="title">
-              <el-input v-model="data.form.title" placeholder="请输入用例名称" style="width: 460px;" />
-            </el-form-item>
+        <el-form :model="drawer.form" ref="drawerFormRef" label-width="110px">
+          <el-form-item label="用例名称" prop="title">
+            <el-input v-model="drawer.form.title" />
+          </el-form-item>
 
-            <el-form-item label="所属项目" prop="projectId">
-              <el-select v-model="data.form.projectVal" placeholder="选择项目" style="width: 320px;" clearable @change="onProjectChange">
-                <el-option v-for="p in data.projects" :key="p._val" :label="p.name" :value="p._val" />
-              </el-select>
-            </el-form-item>
+          <el-form-item label="所属项目" prop="projectId">
+            <el-select v-model="drawer.form.projectId" placeholder="选择项目" @change="onDrawerProjectChange" clearable>
+              <el-option v-for="p in state.projects" :key="p.id ?? p._val" :label="p.name" :value="p.id ?? p._val" />
+            </el-select>
+          </el-form-item>
 
-            <el-form-item label="所属模块" prop="moduleId">
-              <el-select v-model="data.form.moduleVal" placeholder="选择模块" style="width: 320px;" clearable>
-                <el-option v-for="m in data.modulesFiltered" :key="m._val" :label="m.name" :value="m._val" />
-              </el-select>
-            </el-form-item>
+          <el-form-item label="所属模块" prop="moduleId">
+            <el-select v-model="drawer.form.moduleId" placeholder="选择模块" clearable>
+              <el-option
+                  v-for="m in drawer.modulesFiltered"
+                  :key="m.id ?? m._val"
+                  :label="getModuleDisplayName(m)"
+                  :value="m.id ?? m._val"
+              />
+            </el-select>
+          </el-form-item>
 
-            <el-form-item label="优先级" prop="priority">
-              <el-select v-model="data.form.priority" placeholder="请选择优先级" style="width: 320px;">
-                <el-option label="高" value="High" />
-                <el-option label="中" value="Medium" />
-                <el-option label="低" value="Low" />
-              </el-select>
-            </el-form-item>
+          <el-form-item label="优先级" prop="priority">
+            <el-select v-model="drawer.form.priority" placeholder="请选择优先级" clearable>
+              <el-option label="高" value="High" />
+              <el-option label="中" value="Medium" />
+              <el-option label="低" value="Low" />
+            </el-select>
+          </el-form-item>
 
-            <el-form-item label="状态" prop="status">
-              <el-select v-model="data.form.status" placeholder="请选择状态" style="width: 320px;">
-                <el-option label="新建" value="新建" />
-                <el-option label="就绪" value="就绪" />
-                <el-option label="处理中" value="处理中" />
-                <el-option label="处理完成" value="处理完成" />
-                <el-option label="复测中" value="复测中" />
-                <el-option label="拒绝" value="拒绝" />
-                <el-option label="关闭" value="关闭" />
-              </el-select>
-            </el-form-item>
+          <el-form-item label="状态" prop="status">
+            <el-select v-model="drawer.form.status" placeholder="请选择状态" clearable>
+              <el-option label="新建" value="新建" />
+              <el-option label="就绪" value="就绪" />
+              <el-option label="处理中" value="处理中" />
+              <el-option label="处理完成" value="处理完成" />
+              <el-option label="复测中" value="复测中" />
+              <el-option label="拒绝" value="拒绝" />
+              <el-option label="关闭" value="关闭" />
+            </el-select>
+          </el-form-item>
 
-            <el-form-item label="执行人" prop="executedBy">
-              <el-select v-model="data.form.executedByVal" placeholder="选择用户" style="width: 320px;" clearable>
-                <el-option v-for="u in data.users" :key="u._val" :label="u.username || u.name || u.userName" :value="u._val" />
-              </el-select>
-            </el-form-item>
+          <el-form-item label="执行人" prop="executedBy">
+            <el-select v-model="drawer.form.executedBy" clearable>
+              <el-option v-for="u in state.users" :key="u.id ?? u._val" :label="u.username" :value="u.id ?? u._val" />
+            </el-select>
+          </el-form-item>
 
-            <el-form-item label="前置条件" prop="preCondition">
-              <el-input type="textarea" v-model="data.form.preCondition" placeholder="前置条件" style="width: 100%" />
-            </el-form-item>
+          <el-form-item label="前置条件" prop="preCondition">
+            <el-input type="textarea" v-model="drawer.form.preCondition" rows="4" />
+          </el-form-item>
 
-            <el-form-item label="执行步骤" prop="steps">
-              <el-input type="textarea" v-model="data.form.steps" placeholder="执行步骤" style="width: 100%" />
-            </el-form-item>
+          <el-form-item label="执行步骤" prop="steps">
+            <el-input type="textarea" v-model="drawer.form.steps" rows="6" />
+          </el-form-item>
 
-            <el-form-item label="预期结果" prop="expectedResult">
-              <el-input type="textarea" v-model="data.form.expectedResult" placeholder="预期结果" style="width: 100%" />
-            </el-form-item>
-          </el-form>
-        </div>
+          <el-form-item label="预期结果" prop="expectedResult">
+            <el-input type="textarea" v-model="drawer.form.expectedResult" rows="4" />
+          </el-form-item>
+        </el-form>
       </div>
 
-      <!-- 固定底部按钮 -->
       <div class="drawer-footer">
-        <el-button type="danger" @click="data.updateFormVisible = false">取消</el-button>
-        <el-button type="primary" @click="save">保存</el-button>
+        <el-button @click="drawer.visible=false">取消</el-button>
+        <el-button type="primary" @click="saveDrawer">保存</el-button>
       </div>
     </el-drawer>
+
+
   </div>
 </template>
 
 <script setup>
-import { reactive, ref, computed } from 'vue';
+import { reactive, ref, computed, onMounted } from 'vue';
 import request from '@/utils/request.js';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { hasPermission } from '@/utils/perm';
 
-const data = reactive({
-  title: null,
-  filterProjectVal: null,
-  filterModuleVal: null,
+const state = reactive({
+  projects: [],
+  modules: [],
+  users: [],
+  selectedProjectId: null,
+  selectedModuleId: null,
+  q: '',
   pageNum: 1,
   pageSize: 10,
   total: 0,
   case_list: [],
   all_cases: [],
-  deleteId: null,
-  updateFormVisible: false,
-  formVisible3: false,
-  form: {},
-  ids: [],
-  projects: [],
-  modules: [],
-  modulesFiltered: [],
-  users: [],
 });
 
-// ref for form
-const formRef = ref(null);
+const selectedRows = ref([]);
+const drawerFormRef = ref(null);
+
+const drawer = reactive({
+  visible: false,
+  isEdit: false,
+  form: {
+    id: null,
+    title: '',
+    projectId: null,
+    moduleId: null,
+    priority: null,
+    status: null,
+    executedBy: null,
+    preCondition: '',
+    steps: '',
+    expectedResult: ''
+  },
+  modulesFiltered: [],
+});
+
+const confirmDialog = reactive({
+  visible: false,
+  row: null,
+});
+
+const extractList = (resp) => {
+  const body = resp?.data || {};
+  return body.list || (body.data && body.data.list) || body || [];
+};
+const extractPageInfo = (resp) => {
+  const body = resp?.data || {};
+  return {
+    list: body.list || (body.data && body.data.list) || [],
+    total: body.total || (body.data && body.data.total) || (body.data && body.data.count) || 0,
+  };
+};
+
+const loadProjects = async () => {
+  try {
+    const resp = await request.get('/projects', { params: { pageNum: 1, pageSize: 200 } });
+    const list = extractList(resp);
+    state.projects = list.map(p => ({ id: p.id, name: p.name, _val: p.id }));
+  } catch (err) {
+    console.error(err);
+    state.projects = [];
+  }
+};
+
+const loadModules = async (projectId = null) => {
+  try {
+    const params = { pageNum: 1, pageSize: 200 };
+    if (projectId != null) params.projectId = projectId;
+    const resp = await request.get('/modules', { params });
+    const list = extractList(resp);
+    state.modules = list.map(m => ({
+      id: m.id,
+      name: m.name,
+      projectId: m.projectId ?? m.project_id ?? null,
+      _val: m.id
+    }));
+  } catch (err) {
+    console.error(err);
+    state.modules = [];
+  }
+};
+
+const loadUsers = async () => {
+  try {
+    const resp = await request.get('/organization/users', { params: { pageNum: 1, pageSize: 500 } });
+    const list = extractList(resp);
+    state.users = list.map(u => ({ id: u.id, username: u.username || u.name || u.userName, _val: u.id }));
+  } catch (err) {
+    console.warn('加载用户失败：', err);
+    state.users = [];
+  }
+};
+
+const normalizeCaseRow = (r) => {
+  const row = { ...r };
+  row.projectId = row.projectId ?? row.project_id ?? null;
+  row.moduleId = row.moduleId ?? row.module_id ?? null;
+  row.priority = row.priority ?? row.priorityName ?? row.priority_name ?? null;
+  row.status = row.status ?? row.statusName ?? row.status_name ?? null;
+  const createdId = row.createdBy ?? row.created_by ?? null;
+  const executedId = row.executedBy ?? row.executed_by ?? null;
+  row.createdBy = createdId;
+  row.executedBy = executedId;
+  row.createdByName = row.createdByName ?? row.created_by_name ?? (createdId ? findUserNameById(createdId) : null) ?? null;
+  row.executedByName = row.executedByName ?? row.executed_by_name ?? (executedId ? findUserNameById(executedId) : null) ?? null;
+  row.projectName = row.projectName ?? row.project_name ?? (row.project && (row.project.name || row.project.projectName)) ?? null;
+  row.moduleName = row.moduleName ?? row.module_name ?? (row.module && (row.module.name || row.module.moduleName)) ?? null;
+  return row;
+};
+
+const loadCases = async (pageNum = 1, pageSize = state.pageSize) => {
+  try {
+    if (state.selectedProjectId != null || state.selectedModuleId != null || state.q) {
+      const params = { pageNum, pageSize, title: state.q };
+      if (state.selectedProjectId != null) params.projectId = state.selectedProjectId;
+      if (state.selectedModuleId != null) params.moduleId = state.selectedModuleId;
+      const resp = await request.get('/testcases', { params });
+      const pi = extractPageInfo(resp);
+      state.case_list = pi.list.map(normalizeCaseRow);
+      state.total = pi.total;
+      state.pageNum = pageNum;
+      state.pageSize = pageSize;
+    } else {
+      const resp = await request.get('/testcases', { params: { title: state.q, pageNum, pageSize } });
+      const pi = extractPageInfo(resp);
+      state.case_list = pi.list.map(normalizeCaseRow);
+      state.total = pi.total;
+      state.pageNum = pageNum;
+      state.pageSize = pageSize;
+    }
+    buildListsFromCases(state.case_list);
+  } catch (err) {
+    console.error(err);
+    ElMessage.error('加载用例失败');
+    state.case_list = [];
+    state.total = 0;
+  }
+};
+
+const tableData = computed(() => state.case_list);
+
+const findUserNameById = (id) => {
+  if (id == null) return null;
+  const u = state.users.find(x => String(x.id) === String(id));
+  return u ? u.username : null;
+};
+const findProjectName = (id) => {
+  if (id == null) return null;
+  const p = state.projects.find(x => String(x.id) === String(id));
+  return p ? p.name : null;
+};
+const findModuleName = (id) => {
+  if (id == null) return null;
+  const m = state.modules.find(x => String(x.id) === String(id));
+  return m ? m.name : null;
+};
+
+const resolvePriorityName = (row) => {
+  if (!row) return null;
+  return row.priority || null;
+};
+const resolveStatusName = (row) => {
+  if (!row) return null;
+  return row.status || null;
+};
+
+const getProjectName = (row) => {
+  if (!row) return '-';
+  const nameFromRow = row.projectName ?? row.project_name ?? (row.project && (row.project.name || row.project.projectName));
+  if (nameFromRow) return nameFromRow;
+  return findProjectName(row.projectId) || '-';
+};
+const getModuleName = (row) => {
+  if (!row) return '-';
+  const nameFromRow = row.moduleName ?? row.module_name ?? (row.module && (row.module.name || row.module.moduleName));
+  if (nameFromRow) return nameFromRow;
+  return findModuleName(row.moduleId) || '-';
+};
+const getUserName = (row, kind = 'created') => {
+  if (!row) return '-';
+  const created = row.createdByName || row.created_by_name || row.createdBy || row.created_by;
+  const executed = row.executedByName || row.executed_by_name || row.executedBy || row.executed_by || row.executorName;
+  if (kind === 'created') return created || '-';
+  return executed || '-';
+};
+
+const getModuleDisplayName = (m) => {
+  if (!m) return '';
+  if (state.selectedProjectId == null) {
+    const pjName = findProjectName(m.projectId);
+    return pjName ? `${m.name} (${pjName})` : m.name;
+  }
+  return m.name;
+};
+
+const priorityTagType = (pName) => {
+  if (!pName) return 'info';
+  const key = String(pName).toLowerCase();
+  if (key.includes('high') || key.includes('h') || key === 'high' || key.includes('高')) return 'danger';
+  if (key.includes('medium') || key.includes('m') || key === 'medium' || key.includes('中')) return 'warning';
+  if (key.includes('low') || key.includes('l') || key === 'low' || key.includes('低')) return 'success';
+  return 'info';
+};
+
+const statusTagStyle = (s) => {
+  if (!s) return { background: '#f3f4f6', color: '#374151' };
+  const key = String(s).toLowerCase();
+  if (key.includes('新') || key.includes('new')) return { background: '#e0f2fe', color: '#0369a1' };
+  if (key.includes('就绪') || key.includes('ready')) return { background: '#ecfccb', color: '#4d7c0f' };
+  if (key.includes('处') || key.includes('progress') || key.includes('处理中')) return { background: '#fff7ed', color: '#b45309' };
+  if (key.includes('完成') || key.includes('resolved') || key.includes('处理完成')) return { background: '#ecfccb', color: '#4d7c0f' };
+  if (key.includes('复测') || key.includes('retest')) return { background: '#e3f2fd', color: '#1e88e5' };
+  if (key.includes('拒绝') || key.includes('rejected')) return { background: '#fff1f2', color: '#9f1239' };
+  if (key.includes('关') || key.includes('closed')) return { background: '#e6edf3', color: '#334155' };
+  return { background: '#f3f4f6', color: '#374151' };
+};
 
 const formatDate = (v) => {
   if (!v) return '-';
@@ -256,27 +488,6 @@ const formatDate = (v) => {
   return `${Y}-${M}-${D} ${h}:${m}:${s}`;
 };
 
-// 宽容的字段获取器
-const getProjectName = (row) => {
-  if (!row) return '-';
-  return row.projectName || row.project_name || (row.project && (row.project.name || row.project.projectName)) || '-';
-};
-
-const getModuleName = (row) => {
-  if (!row) return '-';
-  return row.moduleName || row.module_name || (row.module && (row.module.name || row.module.moduleName)) || '-';
-};
-
-const getUserName = (row, kind = 'created') => {
-  if (!row) return '-';
-  // kind: 'created' or 'executed'
-  const created = row.createdByName || row.created_by_name || row.createdBy || row.created_by || (row.createdByName);
-  const executed = row.executedByName || row.executed_by_name || row.executedBy || row.executed_by || row.executorName;
-  if (kind === 'created') return created || '-';
-  return executed || '-';
-};
-
-// 构建下拉数据（去重）
 const buildListsFromCases = (list) => {
   const pMap = new Map();
   const mMap = new Map();
@@ -307,429 +518,319 @@ const buildListsFromCases = (list) => {
       if (!uMap.has(_val)) uMap.set(_val, { id: execId ?? null, username: execName ?? '未知', _val });
     }
   });
-  data.projects = Array.from(pMap.values());
-  data.modules = Array.from(mMap.values());
-  data.users = Array.from(uMap.values());
+  state.projects = Array.from(pMap.values());
+  state.modules = Array.from(mMap.values());
+  state.users = Array.from(uMap.values());
 };
 
-// 本地过滤并分页（当使用按项目/模块筛选时启用）
-const applyFiltersAndPaginate = (list, pageNum, pageSize) => {
-  let filtered = list.slice();
-  if (data.filterProjectVal) {
-    filtered = filtered.filter(c => {
-      const id = c.projectId ?? c.project_id ?? (c.project && c.project.id);
-      const candidate = id != null ? String(id) : `name:${c.projectName ?? c.project_name}`;
-      return candidate === data.filterProjectVal;
-    });
-  }
-  if (data.filterModuleVal) {
-    filtered = filtered.filter(c => {
-      const id = c.moduleId ?? c.module_id ?? (c.module && c.module.id);
-      const candidate = id != null ? String(id) : `name:${c.moduleName ?? c.module_name}`;
-      return candidate === data.filterModuleVal;
-    });
-  }
-  data.total = filtered.length;
-  const start = (pageNum - 1) * pageSize;
-  return filtered.slice(start, start + pageSize);
+const onProjectChange = async (val) => {
+  state.selectedModuleId = null;
+  await loadModules(val);
+  await loadCases(1);
 };
 
-// 加载数据：当使用按项目/模块筛选时采用一次性拉取全部并在客户端过滤，否则按分页请求
-const load = async () => {
+const selectModule = (mOrNull) => {
+  if (mOrNull === null) {
+    state.selectedModuleId = null;
+  } else {
+    state.selectedModuleId = mOrNull.id ?? mOrNull._val;
+  }
+  loadCases(1);
+};
+
+const isModuleSelected = (m) => String(state.selectedModuleId) === String(m.id ?? m._val);
+
+const onSearch = () => { state.pageNum = 1; loadCases(1); };
+
+const resetFilters = async () => {
+  state.q = '';
+  state.selectedProjectId = null;
+  state.selectedModuleId = null;
+  await loadModules(null);
+  await loadCases(1);
+};
+
+const onSelectionChange = (rows) => { selectedRows.value = rows; };
+
+const deleteSelected = async () => {
+  if (!selectedRows.value.length) {
+    ElMessage.warning('请选择数据');
+    return;
+  }
   try {
-    if (data.filterProjectVal || data.filterModuleVal) {
-      const allResp = await request.get('/testcases', { params: { pageNum: 1, pageSize: 100000 } });
-      const body = allResp.data || {};
-      const list = body.list || (body.data && body.data.list) || [];
-      data.all_cases = list;
-      buildListsFromCases(list);
-      data.case_list = applyFiltersAndPaginate(list, data.pageNum, data.pageSize);
-    } else {
-      const resp = await request.get('/testcases', { params: { title: data.title, pageNum: data.pageNum, pageSize: data.pageSize } });
-      const body = resp.data || {};
-      const list = body.list || (body.data && body.data.list) || [];
-      data.case_list = list;
-      data.total = body.total || (body.data && body.data.total) || list.length;
-      buildListsFromCases(list);
+    await ElMessageBox.confirm('删除后无法恢复，确认删除吗？', '确认', { type: 'warning' });
+    const ids = selectedRows.value.map(r => r.id);
+    await request.delete('/testcases/deleteBatch', { data: ids });
+    ElMessage.success('删除成功');
+    await loadCases(state.pageNum);
+  } catch (err) {
+    if (err !== 'cancel') {
+      console.error(err);
+      ElMessage.error('删除失败');
     }
+  }
+};
+
+const confirmDelete = (row) => {
+  confirmDialog.row = row;
+  confirmDialog.visible = true;
+};
+
+const doDelete = async () => {
+  try {
+    await request.delete(`/testcases/${confirmDialog.row.id}`);
+    ElMessage.success('删除成功');
+    confirmDialog.visible = false;
+    await loadCases(state.pageNum);
   } catch (err) {
     console.error(err);
-    ElMessage.error('加载用例列表失败');
-    data.case_list = [];
-    data.total = 0;
+    ElMessage.error('删除失败');
   }
 };
 
-const onSearch = () => {
-  data.pageNum = 1;
-  load();
-};
-
-const restart = () => {
-  data.title = null;
-  data.filterProjectVal = null;
-  data.filterModuleVal = null;
-  data.pageNum = 1;
-  data.pageSize = 10;
-  load();
-};
-
-const handleAdd = () => {
-  data.form = {
+const openAddDrawer = () => {
+  drawer.isEdit = false;
+  drawer.form = {
+    id: null,
     title: '',
-    projectVal: null,
-    moduleVal: null,
-    priority: '中',
+    projectId: state.selectedProjectId ?? null,
+    moduleId: null,
+    priority: 'Medium',
     status: '新建',
-    createdByVal: null,
-    executedByVal: null,
+    executedBy: null,
     preCondition: '',
     steps: '',
     expectedResult: ''
   };
-  data.modulesFiltered = [];
-  data.updateFormVisible = true;
+  drawer.modulesFiltered = state.modules.slice();
+  drawer.visible = true;
 };
 
-const preparePayload = (form) => {
-  const payload = { ...form };
-  // 处理 project/module/user 下拉值（支持 id 或 name:xxx）
-  if (payload.projectVal == null) {
-    payload.projectId = null;
-  } else if (String(payload.projectVal).startsWith('name:')) {
-    payload.projectId = null;
-  } else {
-    payload.projectId = Number(payload.projectVal);
-  }
-  if (payload.moduleVal == null) {
-    payload.moduleId = null;
-  } else if (String(payload.moduleVal).startsWith('name:')) {
-    payload.moduleId = null;
-  } else {
-    payload.moduleId = Number(payload.moduleVal);
-  }
-  if (payload.createdByVal == null) {
-    payload.createdBy = null;
-  } else if (String(payload.createdByVal).startsWith('name:')) {
-    payload.createdBy = null;
-  } else {
-    payload.createdBy = Number(payload.createdByVal);
-  }
-  if (payload.executedByVal == null) {
-    payload.executedBy = null;
-  } else if (String(payload.executedByVal).startsWith('name:')) {
-    payload.executedBy = null;
-  } else {
-    payload.executedBy = Number(payload.executedByVal);
-  }
-
-  // 将前端字段名映射为后端实体字段（根据你的后端字段名调整）
-  payload.title = payload.title;
-  payload.preCondition = payload.preCondition;
-  payload.steps = payload.steps;
-  payload.expectedResult = payload.expectedResult;
-  payload.priority = payload.priority;
-  payload.status = payload.status;
-  delete payload.projectVal;
-  delete payload.moduleVal;
-  delete payload.createdByVal;
-  delete payload.executedByVal;
-  return payload;
+const openEditDrawer = async (row) => {
+  drawer.isEdit = true;
+  drawer.form = {
+    id: row.id,
+    title: row.title,
+    projectId: row.projectId ?? row.project_id ?? null,
+    moduleId: row.moduleId ?? row.module_id ?? null,
+    priority: row.priority ?? null,
+    status: row.status ?? null,
+    executedBy: row.executedBy ?? row.executed_by ?? null,
+    preCondition: row.preCondition ?? row.pre_condition ?? '',
+    steps: row.steps ?? '',
+    expectedResult: row.expectedResult ?? row.expected_result ?? ''
+  };
+  await loadModules(drawer.form.projectId);
+  drawer.modulesFiltered = state.modules.slice();
+  drawer.visible = true;
 };
 
-const save = async () => {
-  if (!data.form.title) {
-    ElMessage.warning('请填写用例名称');
-    return;
-  }
+const onDrawerProjectChange = async (val) => {
+  await loadModules(val);
+  drawer.modulesFiltered = state.modules.slice();
+};
+
+const saveDrawer = async () => {
   try {
-    const payload = preparePayload(data.form);
-    if (data.form.id) {
-      await request.put(`/testcases/${data.form.id}`, payload);
+    if (!drawer.form.title || !drawer.form.title.trim()) {
+      ElMessage.warning('请填写用例名称');
+      return;
+    }
+    const payload = {
+      ...drawer.form,
+      projectId: drawer.form.projectId == null ? null : Number(drawer.form.projectId),
+      moduleId: drawer.form.moduleId == null ? null : Number(drawer.form.moduleId),
+    };
+    payload.project_id = payload.projectId;
+    payload.module_id = payload.moduleId;
+
+    if (drawer.isEdit) {
+      await request.put(`/testcases/${payload.id}`, payload);
       ElMessage.success('更新成功');
     } else {
       await request.post('/testcases', payload);
-      ElMessage.success('添加成功');
+      ElMessage.success('创建成功');
     }
-    data.updateFormVisible = false;
-    data.pageNum = 1;
-    await load();
+    drawer.visible = false;
+    await loadCases(1);
   } catch (err) {
     console.error(err);
     ElMessage.error('保存失败');
   }
 };
 
-const handleDel = (id) => {
-  data.formVisible3 = true;
-  data.deleteId = id;
-};
+const handlePageChange = (page) => { loadCases(page); };
 
-const deleteData = async () => {
-  try {
-    await request.delete(`/testcases/${data.deleteId}`);
-    ElMessage.success('删除成功');
-    data.formVisible3 = false;
-    await load();
-  } catch (err) {
-    console.error(err);
-    ElMessage.error('删除失败');
-  } finally {
-    data.deleteId = null;
-  }
-};
-
-const handleUpdate = (row) => {
-  data.form = JSON.parse(JSON.stringify(row || {}));
-  // fill dropdown helper vals
-  const pid = data.form.projectId ?? data.form.project_id ?? (data.form.project && data.form.project.id);
-  const pname = data.form.projectName ?? data.form.project_name ?? (data.form.project && data.form.project.name);
-  data.form.projectVal = pid != null ? String(pid) : (pname ? `name:${pname}` : null);
-
-  const mid = data.form.moduleId ?? data.form.module_id ?? (data.form.module && data.form.module.id);
-  const mname = data.form.moduleName ?? data.form.module_name ?? (data.form.module && data.form.module.name);
-  data.form.moduleVal = mid != null ? String(mid) : (mname ? `name:${mname}` : null);
-
-  const createdId = data.form.createdBy ?? data.form.created_by ?? (data.form.createdBy && data.form.createdBy.id);
-  const createdName = data.form.createdByName ?? data.form.created_by_name ?? (data.form.createdBy && (data.form.createdBy.username || data.form.createdBy.name));
-  data.form.createdByVal = createdId != null ? String(createdId) : (createdName ? `name:${createdName}` : null);
-
-  const execId = data.form.executedBy ?? data.form.executed_by ?? (data.form.executedBy && data.form.executedBy.id);
-  const execName = data.form.executedByName ?? data.form.executed_by_name ?? data.form.executorName;
-  data.form.executedByVal = execId != null ? String(execId) : (execName ? `name:${execName}` : null);
-
-  // filter modules by project
-  filterModulesByProject(data.form.projectVal);
-  data.updateFormVisible = true;
-};
-
-const handleSelectionChange = (rows) => {
-  data.ids = rows.map((row) => row.id);
-};
-
-const delBatch = async () => {
-  if (data.ids.length === 0) {
-    ElMessage.warning('请选择数据');
-    return;
-  }
-  try {
-    await ElMessageBox.confirm('删除后无法恢复，确认删除吗？', '确认', { type: 'warning' });
-    await request.delete('/testcases/deleteBatch', { data: data.ids });
-    ElMessage.success('删除成功');
-    await load();
-  } catch (err) {
-    if (err !== 'cancel') console.error(err);
-  }
-};
-
-const handleSizeChange = (newSize) => {
-  data.pageSize = newSize;
-  data.pageNum = 1;
-  load();
-};
-
-const handleCurrentChange = (page) => {
-  data.pageNum = page;
-  load();
-};
-
-const onProjectChange = (val) => {
-  filterModulesByProject(val);
-};
-
-const filterModulesByProject = (projectVal) => {
-  if (!projectVal) {
-    data.modulesFiltered = data.modules.slice();
-    return;
-  }
-  // modules may carry projectId property we set earlier in buildLists
-  data.modulesFiltered = data.modules.filter(m => {
-    // m.projectId may be null, projectVal may be name:xxx
-    if (String(projectVal).startsWith('name:')) {
-      return String(m._val).startsWith('name:');
-    }
-    return String(m.projectId) === String(projectVal) || String(m._val) === String(projectVal);
-  });
-};
-
-// 初始加载
-load();
+onMounted(async () => {
+  await loadProjects();
+  await loadModules(null);
+  await loadUsers();
+  await loadCases(1);
+});
 </script>
 
 <style scoped>
-/* 顶部条：白色背景、无外边距 */
+.page-root {
+  padding: 0;
+  background: #f7fafc;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
 .top-links-bar {
   margin: 0;
   background: #ffffff;
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
-  -webkit-tap-highlight-color: transparent;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(15,23,42,0.04);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
-
-/* 内部容器：左对齐，平铺排列 */
 .top-links-inner {
   display: flex;
-  justify-content: flex-start;
-  gap: 18px;
+  gap: 16px;
   align-items: center;
-  padding-left: 12px;
 }
-
 .top-link {
   color: #6b7280;
+  font-size: 13px;
   text-decoration: none;
-  font-weight: 400;
-  font-size: 14px;
-  line-height: 20px;
-  padding: 6px 0;
-  transition: color 0.15s ease, border-color 0.15s ease;
-  border-bottom: 2px solid transparent;
-  -webkit-tap-highlight-color: transparent;
-  cursor: pointer;
+  padding-bottom: 6px;
 }
-.top-link:hover,
-.top-link:focus {
-  color: #4b5563;
-  text-decoration: none;
-  outline: none;
-  box-shadow: none;
-}
-.top-link.selected,
 .top-link.active {
   color: #1f6feb;
-  font-weight: 500;
-  border-bottom-color: #1f6feb;
-  padding-bottom: 4px;
+  font-weight: 600;
+  border-bottom: 2px solid #cfe6ff;
 }
-
-/* 合并后的卡片样式 */
-.merged-card {
-  margin: 5px;
-  background-color: white;
-  padding: 10px;
-  box-shadow: 0 0 12px rgba(0,0,0,.12);
+.page-container {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
-
-/* 工具条：左侧筛选，右侧操作 */
-.toolbar {
+.top-card {
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  box-shadow: 0 6px 18px rgba(15,23,42,0.06);
+  padding: 12px 18px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  height: 64px;
+  min-height: 56px;
+  box-sizing: border-box;
 }
-.toolbar-right {
-  margin-left: auto;
+.main-row {
   display: flex;
-  gap: 8px;
+  gap: 12px;
+  align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
 }
-
-/* 表单弹窗内边距 */
-.form-wrapper {
-  padding: 10px 20px;
+.left-card {
+  flex: 0 0 15%;
+  max-width: 320px;
+  min-width: 180px;
+  box-sizing: border-box;
+  padding: 14px;
+  display:flex;
+  flex-direction:column;
+  height: calc(100vh - 200px);
+  overflow: auto;
 }
-
-.action-link {
-  display: inline-block;
-  margin-right: 12px;
+.right-card {
+  flex: 1 1 0;
+  min-width: 0;
+  display:flex;
+  flex-direction:column;
+  padding: 12px;
+  box-sizing: border-box;
+  max-height: calc(100vh - 160px);
+}
+.card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 22px rgba(15,23,42,0.06);
+}
+.left-card-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 10px;
+}
+.module-list {
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+.module-chip {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(107,114,128,0.06);
+  color: #374151;
   cursor: pointer;
-  color: #1f6feb;
-  font-weight: 500;
+  transition: all .18s ease;
   font-size: 14px;
-  padding: 4px 6px;
-  border-radius: 4px;
-  transition: background-color .12s ease, color .12s ease;
+  user-select: none;
+  border: 1px solid rgba(15,23,42,0.02);
 }
-.action-link:hover {
-  background-color: rgba(31,111,235,0.08);
+.module-chip:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(15,23,42,0.04); }
+.module-chip.active {
+  background: rgba(51,65,85,0.12);
+  color: #0f172a;
+  border-color: rgba(15,23,42,0.06);
+  font-weight: 600;
 }
-.action-link.danger {
-  color: #ef4444;
+.right-toolbar {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom: 8px;
 }
-.action-link.danger:hover {
-  background-color: rgba(239,68,68,0.08);
+.total-text { color:#6b7280; font-size:13px; }
+.table-viewport {
+  overflow: auto;
+  border-radius: 8px;
+  padding-bottom: 8px;
+  flex: 1 1 auto;
 }
-
-/* ========== Drawer 自定义样式 ========== */
-/* custom class applied to el-drawer root */
-.drawer-custom {
-  /* remove default border radius so it "attaches" to the browser edge cleanly */
-  --drawer-bg: #ffffff;
+.action-link {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 8px;
+  border-radius:6px;
+  cursor:pointer;
+  color:#1f6feb;
+  font-weight:500;
 }
-
-/* 深度选择器，调整内部 body 与头部样式 */
+.action-link:hover { background: rgba(31,111,235,0.06); }
+.action-link.danger { color:#ef4444; }
+.action-link.danger:hover { background: rgba(239,68,68,0.06); }
+.bottom-pagination {
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  padding-top: 8px;
+}
+::v-deep(.el-pagination) { font-size: 12px; }
+.drawer-custom { --drawer-bg: #ffffff; }
 ::v-deep(.drawer-custom .el-drawer__container) {
   background: var(--drawer-bg);
   box-shadow: -18px 0 40px rgba(22,27,34,0.12);
   border-left: 1px solid rgba(20,24,26,0.04);
   border-top-left-radius: 10px;
   border-bottom-left-radius: 10px;
-  overflow: hidden;
 }
-
-/* header area we inserted */
-.drawer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  border-bottom: 1px solid rgba(0,0,0,0.04);
-  background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(250,250,250,0.9));
-}
-.drawer-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #111827;
-}
-.drawer-actions {
-  display: flex;
-  gap: 8px;
-}
-
-/* body: scrollable content area */
-.drawer-body {
-  height: calc(100% - 120px); /* leave space for header + footer */
-  overflow: auto;
-  padding-bottom: 16px;
-}
-
-/* footer: fixed at bottom of drawer */
-.drawer-footer {
-  position: absolute;
-  right: 24px;
-  bottom: 18px;
-  display: flex;
-  gap: 10px;
-  z-index: 30;
-}
-
-/* form wrapper padding override to look nicer in drawer */
-.drawer-custom .form-wrapper {
-  padding: 18px 28px 80px 28px; /* leave bottom space for floating footer */
-}
-
-/* smaller inputs area adjustments */
-::v-deep(.drawer-custom .el-input__inner),
-::v-deep(.drawer-custom .el-select .el-input__inner) {
-  font-size: 14px;
-}
-
-/* ensure drawer is attached to right edge (no outer margin) */
-::v-deep(.el-drawer__mask) {
-  /* slightly darker backdrop for emphasis */
-  background-color: rgba(13,16,20,0.36);
-}
-
-/* smooth slide animation tweak (element-plus has its own, this enhances) */
-::v-deep(.el-drawer__container) {
-  transition: transform 320ms cubic-bezier(.2,.9,.3,1);
-}
-
-/* responsive: on very small screens make it full width */
-@media (max-width: 720px) {
-  ::v-deep(.el-drawer__container) {
-    width: 100% !important;
-    border-radius: 0 !important;
-  }
-  .drawer-body { height: calc(100% - 120px); }
+.drawer-header { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom: 1px solid rgba(0,0,0,0.04); }
+.drawer-title { font-size:16px; font-weight:600; color:#111827; }
+.drawer-body { padding: 18px 28px 80px; max-height: calc(100% - 160px); overflow:auto; }
+.drawer-footer { position:absolute; right:24px; bottom:18px; display:flex; gap:10px; z-index:30; }
+@media (max-width: 960px) {
+  .main-row { flex-direction: column; }
+  .left-card { flex: 0 0 auto; width: 100%; max-width: none; min-width: 0; height: auto; }
+  .right-card { width: 100%; max-height: none; }
+  .top-card { height: auto; padding: 12px; gap: 8px; flex-wrap:wrap; }
+  .table-viewport { max-height: none; }
 }
 </style>

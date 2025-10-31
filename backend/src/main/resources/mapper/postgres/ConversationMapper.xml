@@ -54,10 +54,16 @@
         WHERE conversation_uuid = #{conversationUuid}::uuid
     </select>
 
-    <insert id="insertConversation" parameterType="com.example.entity.Conversation" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
-        INSERT INTO conversations (conversation_uuid, user_id, assistant_id, messages, metadata, last_activity, created_at, updated_at)
-        VALUES (#{conversationUuid}::uuid, #{userId}, #{assistantId}, #{messages}::jsonb, #{metadata}::jsonb, #{lastActivity}, now(), now())
+    <insert id="insertConversation" parameterType="com.example.entity.Conversation"
+            useGeneratedKeys="true"
+            keyProperty="conversationUuid"
+            keyColumn="conversation_uuid">
+        INSERT INTO conversations (user_id, assistant_id)
+            VALUES (#{userId}, #{assistantId})
+                RETURNING conversation_uuid
     </insert>
+
+
 
     <update id="updateConversation" parameterType="com.example.entity.Conversation">
         UPDATE conversations

@@ -44,7 +44,7 @@
         <if test="dateTo != null and dateTo != ''">
             AND created_at &lt;= #{dateTo}
         </if>
-        ORDER BY created_at DESC
+        ORDER BY id DESC
     </select>
 
     <!-- 按名称查询（简单） -->

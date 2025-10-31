@@ -26,6 +26,7 @@
                  LEFT JOIN project p ON tc.project_id = p.id
                  LEFT JOIN module m  ON tc.module_id = m.id
                  LEFT JOIN `user` u  ON tc.created_by = u.id
+        ORDER BY id DESC
     </select>
 
     <!-- 按 title 模糊查询 -->
@@ -86,6 +87,17 @@
         (project_id, module_id, title, description, pre_condition, steps, expected_result, status, priority, created_by, created_at, updated_at)
         VALUES
             (#{projectId}, #{moduleId}, #{title}, #{description}, #{preCondition}, #{steps}, #{expectedResult}, #{status}, #{priority}, #{createdBy}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <insert id="insertBatch" parameterType="list" useGeneratedKeys="true" keyProperty="list.id" keyColumn="id">
+        INSERT INTO test_case
+        (project_id, module_id, title, description, pre_condition, steps, expected_result, status, priority, created_by, created_at, updated_at)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.projectId}, #{item.moduleId}, #{item.title}, #{item.description}, #{item.preCondition},
+            #{item.steps}, #{item.expectedResult}, #{item.status}, #{item.priority}, #{item.createdBy},
+            #{item.createdAt}, #{item.updatedAt})
+        </foreach>
     </insert>
 
 

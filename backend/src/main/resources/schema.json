@@ -1,0 +1,326 @@
+{
+  "user": {
+    "description": "用户表",
+    "columns": [
+      {"name":"id","type":"bigint","pk":true,"nullable":false,"desc":"用户唯一 id"},
+      {"name":"username","type":"varchar(50)","pk":false,"nullable":false,"desc":"用户名, 唯一"},
+      {"name":"password","type":"varchar(255)","pk":false,"nullable":false,"desc":"加密存储的密码"},
+      {"name":"email","type":"varchar(100)","pk":false,"nullable":true,"desc":"邮箱"},
+      {"name":"status","type":"tinyint","pk":false,"nullable":true,"desc":"状态：1-激活，0-禁用"},
+      {"name":"created_at","type":"datetime","pk":false,"nullable":true,"desc":"创建时间"},
+      {"name":"updated_at","type":"datetime","pk":false,"nullable":true,"desc":"更新时间"},
+      {"name":"role_id","type":"bigint","pk":false,"nullable":true,"desc":"全局角色ID（单一角色）"},
+      {"name":"department_id","type":"bigint","pk":false,"nullable":true,"desc":"所属部门ID"}
+    ],
+    "indexes": ["username","idx_user_role","idx_user_department"],
+    "foreign_keys": [
+      "role_id->role.id",
+      "department_id->department.id"
+    ],
+    "sample_rows": [
+      {"id":1,"username":"admin","password":"admin_password_hash","email":"admin@test.com","status":1},
+      {"id":2,"username":"manager","password":"manager_password_hash","email":"manager@test.com"}
+    ]
+  },
+  "role": {
+    "description": "角色表",
+    "columns": [
+      {"name":"id","type":"bigint","pk":true,"nullable":false,"desc":"角色 id"},
+      {"name":"name","type":"varchar(50)","pk":false,"nullable":false,"desc":"角色名, 唯一"},
+      {"name":"description","type":"varchar(255)","pk":false,"nullable":true,"desc":"角色描述"},
+      {"name":"created_at","type":"datetime","pk":false,"nullable":true,"desc":"创建时间"},
+      {"name":"updated_at","type":"datetime","pk":false,"nullable":true,"desc":"更新时间"}
+    ],
+    "indexes": ["name"],
+    "sample_rows": [
+      {"id":1,"name":"Admin","description":"系统管理员，拥有所有权限"},
+      {"id":2,"name":"Test Manager","description":"测试经理，负责测试计划和用例管理"}
+    ]
+  },
+  "permission": {
+    "description": "权限表",
+    "columns": [
+      {"name":"id","type":"bigint","pk":true,"nullable":false,"desc":"权限 id"},
+      {"name":"name","type":"varchar(50)","pk":false,"nullable":false,"desc":"权限名, 唯一"},
+      {"name":"description","type":"varchar(255)","pk":false,"nullable":true,"desc":"权限描述"},
+      {"name":"created_at","type":"datetime","pk":false,"nullable":true,"desc":"创建时间"},
+      {"name":"updated_at","type":"datetime","pk":false,"nullable":true,"desc":"更新时间"}
+    ],
+    "indexes": ["name"],
+    "sample_rows": [
+      {"id":1,"name":"USER_MANAGE"},
+      {"id":2,"name":"ROLE_MANAGE"},
+      {"id":3,"name":"TESTCASE_MANAGE"}
+    ]
+  },
+  "user_role": {
+    "description": "用户角色关联表（多对多）",
+    "columns": [
+      {"name":"user_id","type":"bigint","pk":true,"nullable":false,"desc":"用户ID"},
+      {"name":"role_id","type":"bigint","pk":true,"nullable":false,"desc":"角色ID"}
+    ],
+    "foreign_keys": [
+      "user_id->user.id",
+      "role_id->role.id"
+    ],
+    "sample_rows": [
+      {"user_id":1,"role_id":1},
+      {"user_id":2,"role_id":2}
+    ]
+  },
+  "role_permission": {
+    "description": "角色权限关联表（多对多）",
+    "columns": [
+      {"name":"role_id","type":"bigint","pk":true,"nullable":false,"desc":"角色ID"},
+      {"name":"permission_id","type":"bigint","pk":true,"nullable":false,"desc":"权限ID"}
+    ],
+    "foreign_keys": [
+      "role_id->role.id",
+      "permission_id->permission.id"
+    ],
+    "sample_rows": [
+      {"role_id":1,"permission_id":1},
+      {"role_id":1,"permission_id":2},
+      {"role_id":2,"permission_id":3}
+    ]
+  },
+  "department": {
+    "description": "部门/组织表，支持组织树",
+    "columns": [
+      {"name":"id","type":"bigint","pk":true,"nullable":false,"desc":"部门 id"},
+      {"name":"name","type":"varchar(200)","pk":false,"nullable":false,"desc":"部门/组织名称, 唯一"},
+      {"name":"parent_id","type":"bigint","pk":false,"nullable":true,"desc":"上级部门 id"},
+      {"name":"description","type":"varchar(500)","pk":false,"nullable":true,"desc":"部门描述"},
+      {"name":"created_at","type":"datetime","pk":false,"nullable":true,"desc":"创建时间"},
+      {"name":"updated_at","type":"datetime","pk":false,"nullable":true,"desc":"更新时间"}
+    ],
+    "foreign_keys": ["parent_id->department.id"],
+    "sample_rows": [
+      {"id":1,"name":"测试部","description":"负责软件测试与质量保障"},
+      {"id":2,"name":"研发部","description":"负责软件开发与维护"}
+    ]
+  },
+  "project": {
+    "description": "项目表",
+    "columns": [
+      {"name":"id","type":"bigint","pk":true,"nullable":false,"desc":"项目 id"},
+      {"name":"name","type":"varchar(200)","pk":false,"nullable":false,"desc":"项目名称, 唯一"},
+      {"name":"description","type":"varchar(500)","pk":false,"nullable":true,"desc":"项目描述"},
+      {"name":"created_at","type":"datetime","pk":false,"nullable":true,"desc":"创建时间"}
+    ],
+    "sample_rows": [
+      {"id":1,"name":"Project Alpha","description":"示例项目 Alpha"},
+      {"id":2,"name":"Project Beta","description":"示例项目 Beta"}
+    ]
+  },
+  "project_user": {
+    "description": "项目与员工关联表（多对多）",
+    "columns": [
+      {"name":"project_id","type":"bigint","pk":true,"nullable":false,"desc":"项目ID"},
+      {"name":"user_id","type":"bigint","pk":true,"nullable":false,"desc":"用户ID"}
+    ],
+    "foreign_keys": [
+      "project_id->project.id",
+      "user_id->user.id"
+    ],
+    "sample_rows": [
+      {"project_id":1,"user_id":2},
+      {"project_id":2,"user_id":2},
+      {"project_id":1,"user_id":3}
+    ]
+  },
+  "module": {
+    "description": "模块表",
+    "columns": [
+      {"name":"id","type":"bigint","pk":true,"nullable":false,"desc":"模块 id"},
+      {"name":"project_id","type":"bigint","pk":false,"nullable":false,"desc":"所属项目ID"},
+      {"name":"name","type":"varchar(200)","pk":false,"nullable":false,"desc":"模块名称"},
+      {"name":"description","type":"varchar(500)","pk":false,"nullable":true,"desc":"模块描述"},
+      {"name":"created_at","type":"datetime","pk":false,"nullable":true,"desc":"创建时间"}
+    ],
+    "foreign_keys": ["project_id->project.id"],
+    "sample_rows": [
+      {"id":1,"project_id":1,"name":"Auth","description":"认证模块"},
+      {"id":2,"project_id":1,"name":"UI","description":"用户界面模块"}
+    ]
+  },
+  "test_case": {
+    "description": "测试用例表",
+    "columns": [
+      {"name":"id","type":"bigint","pk":true,"nullable":false,"desc":"用例 id"},
+      {"name":"project_id","type":"bigint","pk":false,"nullable":true,"desc":"关联项目ID"},
+      {"name":"module_id","type":"bigint","pk":false,"nullable":true,"desc":"关联模块ID"},
+      {"name":"title","type":"varchar(255)","pk":false,"nullable":false,"desc":"用例标题"},
+      {"name":"description","type":"text","pk":false,"nullable":true,"desc":"用例描述"},
+      {"name":"pre_condition","type":"text","pk":false,"nullable":true,"desc":"前置条件"},
+      {"name":"steps","type":"text","pk":false,"nullable":true,"desc":"执行步骤"},
+      {"name":"expected_result","type":"text","pk":false,"nullable":true,"desc":"预期结果"},
+      {"name":"created_by","type":"bigint","pk":false,"nullable":true,"desc":"创建人ID"},
+      {"name":"created_at","type":"datetime","pk":false,"nullable":true,"desc":"创建时间"},
+      {"name":"updated_at","type":"datetime","pk":false,"nullable":true,"desc":"更新时间"},
+      {"name":"status","type":"varchar(50)","pk":false,"nullable":true,"desc":"用例状态"},
+      {"name":"priority","type":"varchar(50)","pk":false,"nullable":true,"desc":"用例优先级"}
+    ],
+    "foreign_keys": [
+      "project_id->project.id",
+      "module_id->module.id",
+      "created_by->user.id"
+    ],
+    "sample_rows": [
+      {"id":1,"project_id":1,"module_id":1,"title":"登录功能-正常登录","pre_condition":"已注册用户","steps":"1. 打开登录页\\n2. 输入用户名/密码\\n3. 点击登录","expected_result":"进入首页","created_by":2},
+      {"id":2,"project_id":1,"module_id":2,"title":"主界面UI渲染","steps":"打开首页","expected_result":"页面无异常","created_by":3}
+    ]
+  },
+  "test_case_execution": {
+    "description": "用例执行记录表",
+    "columns": [
+      {"name":"id","type":"bigint","pk":true,"nullable":false,"desc":"执行记录 id"},
+      {"name":"test_case_id","type":"bigint","pk":false,"nullable":false,"desc":"用例ID"},
+      {"name":"executed_by","type":"bigint","pk":false,"nullable":true,"desc":"执行人ID"},
+      {"name":"executed_at","type":"datetime","pk":false,"nullable":true,"desc":"执行时间"},
+      {"name":"status","type":"varchar(50)","pk":false,"nullable":true,"desc":"执行状态"},
+      {"name":"remarks","type":"text","pk":false,"nullable":true,"desc":"执行备注"},
+      {"name":"actual_result","type":"text","pk":false,"nullable":true,"desc":"实际结果"},
+      {"name":"environment","type":"varchar(200)","pk":false,"nullable":true,"desc":"执行环境 / 版本 / 浏览器等"}
+    ],
+    "foreign_keys": [
+      "test_case_id->test_case.id",
+      "executed_by->user.id"
+    ],
+    "sample_rows": [
+      {"id":1,"test_case_id":1,"executed_by":3,"status":"Passed","remarks":"功能正常"},
+      {"id":2,"test_case_id":2,"executed_by":3,"status":"Failed","remarks":"样式错位"}
+    ]
+  },
+  "test_plan": {
+    "description": "测试计划表",
+    "columns": [
+      {"name":"id","type":"bigint","pk":true,"nullable":false,"desc":"测试计划 id"},
+      {"name":"name","type":"varchar(255)","pk":false,"nullable":false,"desc":"测试计划名称"},
+      {"name":"project_id","type":"bigint","pk":false,"nullable":true,"desc":"关联项目ID"},
+      {"name":"module_id","type":"bigint","pk":false,"nullable":true,"desc":"关联模块ID"},
+      {"name":"description","type":"text","pk":false,"nullable":true,"desc":"测试计划描述/目标"},
+      {"name":"owner_id","type":"bigint","pk":false,"nullable":true,"desc":"计划负责人"},
+      {"name":"status","type":"varchar(50)","pk":false,"nullable":true,"desc":"计划状态"},
+      {"name":"start_date","type":"date","pk":false,"nullable":true,"desc":"计划开始日期"},
+      {"name":"end_date","type":"date","pk":false,"nullable":true,"desc":"计划结束日期"},
+      {"name":"created_at","type":"datetime","pk":false,"nullable":true,"desc":"创建时间"},
+      {"name":"updated_at","type":"datetime","pk":false,"nullable":true,"desc":"更新时间"}
+    ],
+    "foreign_keys": [
+      "project_id->project.id",
+      "module_id->module.id",
+      "owner_id->user.id"
+    ],
+    "sample_rows": [
+      {"id":1,"name":"Regression Sprint Oct 2025","project_id":1,"module_id":1,"owner_id":2,"status":"Active","start_date":"2025-10-20","end_date":"2025-10-31"}
+    ]
+  },
+  "test_plan_testcase": {
+    "description": "测试计划与用例关联表",
+    "columns": [
+      {"name":"test_plan_id","type":"bigint","pk":true,"nullable":false,"desc":"测试计划ID"},
+      {"name":"test_case_id","type":"bigint","pk":true,"nullable":false,"desc":"用例ID"},
+      {"name":"added_by","type":"bigint","pk":false,"nullable":true,"desc":"添加者ID"},
+      {"name":"added_at","type":"datetime","pk":false,"nullable":true,"desc":"添加时间"}
+    ],
+    "foreign_keys": [
+      "test_plan_id->test_plan.id",
+      "test_case_id->test_case.id",
+      "added_by->user.id"
+    ],
+    "sample_rows": [
+      {"test_plan_id":1,"test_case_id":1,"added_by":2,"added_at":"2025-10-19 09:05:00"},
+      {"test_plan_id":1,"test_case_id":2,"added_by":2,"added_at":"2025-10-19 09:06:00"}
+    ]
+  },
+  "defect_status": {
+    "description": "缺陷状态字典表",
+    "columns": [
+      {"name":"id","type":"bigint","pk":true,"nullable":false,"desc":"状态 id"},
+      {"name":"name","type":"varchar(50)","pk":false,"nullable":false,"desc":"状态名称"},
+      {"name":"description","type":"varchar(255)","pk":false,"nullable":true,"desc":"状态描述"}
+    ],
+    "sample_rows": [
+      {"id":1,"name":"New","description":"新建"},
+      {"id":2,"name":"In Progress","description":"处理中"}
+    ]
+  },
+  "defect_priority": {
+    "description": "缺陷优先级字典表",
+    "columns": [
+      {"name":"id","type":"bigint","pk":true,"nullable":false,"desc":"优先级 id"},
+      {"name":"name","type":"varchar(50)","pk":false,"nullable":false,"desc":"优先级名称"},
+      {"name":"description","type":"varchar(255)","pk":false,"nullable":true,"desc":"优先级描述"}
+    ],
+    "sample_rows": [
+      {"id":1,"name":"High","description":"高"},
+      {"id":2,"name":"Medium","description":"中"}
+    ]
+  },
+  "defect": {
+    "description": "缺陷表",
+    "columns": [
+      {"name":"id","type":"bigint","pk":true,"nullable":false,"desc":"缺陷 id"},
+      {"name":"title","type":"varchar(255)","pk":false,"nullable":false,"desc":"缺陷标题"},
+      {"name":"description","type":"text","pk":false,"nullable":true,"desc":"缺陷描述"},
+      {"name":"status_id","type":"bigint","pk":false,"nullable":true,"desc":"状态ID"},
+      {"name":"priority_id","type":"bigint","pk":false,"nullable":true,"desc":"优先级ID"},
+      {"name":"created_by","type":"bigint","pk":false,"nullable":true,"desc":"提交人ID"},
+      {"name":"assigned_to","type":"bigint","pk":false,"nullable":true,"desc":"处理人ID"},
+      {"name":"created_at","type":"datetime","pk":false,"nullable":true,"desc":"创建时间"},
+      {"name":"updated_at","type":"datetime","pk":false,"nullable":true,"desc":"更新时间"},
+      {"name":"project_id","type":"bigint","pk":false,"nullable":true,"desc":"关联项目ID"},
+      {"name":"module_id","type":"bigint","pk":false,"nullable":true,"desc":"关联模块ID"}
+    ],
+    "foreign_keys": [
+      "status_id->defect_status.id",
+      "priority_id->defect_priority.id",
+      "created_by->user.id",
+      "assigned_to->user.id",
+      "project_id->project.id",
+      "module_id->module.id"
+    ],
+    "sample_rows": [
+      {"id":1,"title":"登录失败-密码校验异常","status_id":1,"priority_id":1,"created_by":3,"assigned_to":4},
+      {"id":2,"title":"UI样式错位-首页卡片","status_id":1,"priority_id":2,"created_by":3,"assigned_to":4}
+    ]
+  },
+  "defect_history": {
+    "description": "缺陷处理历史表",
+    "columns": [
+      {"name":"id","type":"bigint","pk":true,"nullable":false,"desc":"历史记录 id"},
+      {"name":"defect_id","type":"bigint","pk":false,"nullable":false,"desc":"缺陷ID"},
+      {"name":"changed_by","type":"bigint","pk":false,"nullable":true,"desc":"修改人ID"},
+      {"name":"status_id","type":"bigint","pk":false,"nullable":true,"desc":"状态ID"},
+      {"name":"priority_id","type":"bigint","pk":false,"nullable":true,"desc":"优先级ID"},
+      {"name":"remarks","type":"text","pk":false,"nullable":true,"desc":"备注"},
+      {"name":"changed_at","type":"datetime","pk":false,"nullable":true,"desc":"修改时间"}
+    ],
+    "foreign_keys": [
+      "defect_id->defect.id",
+      "changed_by->user.id",
+      "status_id->defect_status.id",
+      "priority_id->defect_priority.id"
+    ],
+    "sample_rows": [
+      {"id":1,"defect_id":1,"changed_by":3,"status_id":1,"priority_id":1,"remarks":"提交缺陷，等待开发确认"},
+      {"id":2,"defect_id":2,"changed_by":3,"status_id":1,"priority_id":2,"remarks":"提交缺陷，截图已附"}
+    ]
+  },
+  "testcase_defect": {
+    "description": "用例与缺陷关联表（多对多）",
+    "columns": [
+      {"name":"test_case_id","type":"bigint","pk":true,"nullable":false,"desc":"用例ID"},
+      {"name":"defect_id","type":"bigint","pk":true,"nullable":false,"desc":"缺陷ID"}
+    ],
+    "foreign_keys": [
+      "test_case_id->test_case.id",
+      "defect_id->defect.id"
+    ],
+    "sample_rows": [
+      {"test_case_id":1,"defect_id":1},
+      {"test_case_id":2,"defect_id":2}
+    ]
+  }
+}

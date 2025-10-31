@@ -7,7 +7,8 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -34,6 +35,17 @@ public class TestCaseService {
 
     public void addTestCase(TestCase testCase) {
         testCaseMapper.insert(testCase);
+    }
+
+    @Transactional
+    public void insertBatch(List<com.example.entity.TestCase> list) {
+        if (list == null || list.isEmpty()) return;
+        Date now = new Date();
+        for (com.example.entity.TestCase t : list) {
+            if (t.getCreatedAt() == null) t.setCreatedAt(now);
+            if (t.getUpdatedAt() == null) t.setUpdatedAt(now);
+        }
+        testCaseMapper.insertBatch(list);
     }
 
     public void updateTestCase(TestCase testCase) {

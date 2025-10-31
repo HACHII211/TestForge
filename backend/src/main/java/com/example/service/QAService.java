@@ -95,15 +95,15 @@ public class QAService {
                     resultStr.append(entry.getKey())
                             .append(" = ")
                             .append(entry.getValue())
-                            .append("\n"); // 每个键值对换行显示
+                            .append("\n");
                 }
-                resultStr.append("\n"); // 每一行的结果之间添加一个空行
+                resultStr.append("\n");
             }
 
             return resultStr.toString(); // 返回拼接好的字符串
         }
 
-        return "没有查询结果"; // 如果没有数据返回一个默认的提示
+        return "没有查询结果";
     }
 
     public String generateSql(String question) {
