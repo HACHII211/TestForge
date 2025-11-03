@@ -22,7 +22,6 @@ const router = createRouter({
     {path: '/',redirect:'/login'},
     {path: '/404',name :'NotFound',meta:{title: '走丢了~'},component:()=> import('../views/404.vue')},
     {path: '/login',name :'login',meta:{title: '登陆界面'},component:()=> import('../views/login.vue')},
-    {path: '/register',name :'register',meta:{title: '注册界面'},component:()=> import('../views/register.vue')},
     {path:'/:pathMatch(.*)',redirect: '/404'}
   ]
 })
